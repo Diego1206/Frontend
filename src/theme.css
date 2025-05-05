@@ -1,0 +1,210 @@
+/* --- START OF FILE src/theme.css --- */
+
+/* 1. Definición de Variables CSS */
+:root {
+    /* --- Modo Claro (Predeterminado) --- */
+    /* Fondos */
+    --bg-base: #f3f4f6; /* gray-100 */
+    --bg-surface: #ffffff; /* white */
+    --bg-sidebar: #e5e7eb; /* gray-200 */
+    --bg-input: #f9fafb; /* gray-50 */
+    --bg-button-primary: #4f46e5; /* indigo-600 */
+    --bg-button-primary-hover: #4338ca; /* indigo-700 */
+    --bg-button-secondary: #e5e7eb; /* gray-200 */
+    --bg-button-secondary-hover: #d1d5db; /* gray-300 */
+    --bg-chat-user: #3b82f6; /* blue-500 */
+    --bg-chat-model: #e5e7eb; /* gray-200 */
+    --bg-chat-error: #fee2e2; /* red-100 */
+    --bg-code-block: #f3f4f6; /* gray-100 */
+    --bg-code-inline: #e5e7eb; /* gray-200 */
+    --bg-modal-overlay: rgba(107, 114, 128, 0.75); /* gray-500 con alpha */
+    --bg-tooltip: #1f2937; /* gray-800 */
+    --bg-active-item: #dbeafe; /* blue-100 */
+    --bg-hover-item: #f3f4f6; /* gray-100 */
+    --bg-success: #d1fae5; /* green-100 */
+    --bg-error-notification: #fee2e2; /* red-100 */
+  
+    /* Texto */
+    --text-base: #1f2937; /* gray-800 */
+    --text-muted: #6b7280; /* gray-500 */
+    --text-primary: #1f2937; /* gray-800 */
+    --text-secondary: #4b5563; /* gray-600 */
+    --text-accent: #4f46e5; /* indigo-600 */
+    --text-accent-hover: #4338ca; /* indigo-700 */
+    --text-button-primary: #ffffff; /* white */
+    --text-button-secondary: #1f2937; /* gray-800 */
+    --text-chat-user: #ffffff; /* white */
+    --text-chat-model: #1f2937; /* gray-800 */
+    --text-chat-error: #991b1b; /* red-800 */
+    --text-error: #b91c1c; /* red-700 */
+    --text-success: #047857; /* green-700 */
+    --text-link: #3b82f6; /* blue-500 */
+    --text-tooltip: #f9fafb; /* gray-50 */
+  
+    /* Bordes */
+    --border-base: #d1d5db; /* gray-300 */
+    --border-input: #d1d5db; /* gray-300 */
+    --border-input-focus: #4f46e5; /* indigo-600 */
+    --border-divider: #e5e7eb; /* gray-200 */
+    --border-chat-error: #fca5a5; /* red-300 */
+    --border-success: #a7f3d0; /* green-300 */
+    --border-error-notification: #fecaca; /* red-200 */
+  
+    /* Login Fondo Animado */
+    --login-bg-color-1: #e0e7ff; /* indigo-100 */
+    --login-bg-color-2: #f3f4f6; /* gray-100 */
+    --login-bg-color-3: #ffffff; /* white - 'rayo' */
+    --login-form-bg: rgba(255, 255, 255, 0.8);
+    --login-form-border: rgba(209, 213, 219, 0.5); /* gray-300/50 */
+  }
+  
+  /* Sobrescribe variables cuando <html> tiene la clase 'dark-mode' */
+  html.dark-mode {
+    /* --- Modo Oscuro --- */
+    /* Fondos */
+    --bg-base: #111827; /* gray-900 */
+    --bg-surface: #1f2937; /* gray-800 */
+    --bg-sidebar: #1f2937; /* gray-800 */
+    --bg-input: #374151; /* gray-700 */
+    --bg-button-primary: #6366f1; /* indigo-500 */
+    --bg-button-primary-hover: #4f46e5; /* indigo-600 */
+    --bg-button-secondary: #4b5563; /* gray-600 */
+    --bg-button-secondary-hover: #6b7280; /* gray-500 */
+    --bg-chat-user: #2563eb; /* blue-600 */
+    --bg-chat-model: #374151; /* gray-700 */
+    --bg-chat-error: rgba(159, 18, 57, 0.3); /* red-900/30 */
+    --bg-code-block: #374151; /* gray-700 */
+    --bg-code-inline: #4b5563; /* gray-600 */
+    --bg-modal-overlay: rgba(17, 24, 39, 0.85); /* gray-900 con alpha */
+    --bg-tooltip: #f9fafb; /* gray-50 */
+    --bg-active-item: #374151; /* gray-700 */
+    --bg-hover-item: #4b5563; /* gray-600 */
+    --bg-success: rgba(3, 105, 161, 0.3); /* green-900/30 */
+    --bg-error-notification: rgba(159, 18, 57, 0.3); /* red-900/30 */
+    --text-error: #f87171;
+  
+    /* Texto */
+    --text-base: #f3f4f6; /* gray-100 */
+    --text-muted: #9ca3af; /* gray-400 */
+    --text-primary: #ffffff; /* white */
+    --text-secondary: #d1d5db; /* gray-300 */
+    --text-accent: #818cf8; /* indigo-400 */
+    --text-accent-hover: #a5b4fc; /* indigo-300 */
+    --text-button-primary: #ffffff; /* white */
+    --text-button-secondary: #e5e7eb; /* gray-200 */
+    --text-chat-user: #ffffff; /* white */
+    --text-chat-model: #e5e7eb; /* gray-200 */
+    --text-chat-error: #fca5a5; /* red-400 */
+    --text-error: #fca5a5; /* red-400 */
+    --text-success: #6ee7b7; /* green-400 */
+    --text-link: #60a5fa; /* blue-400 */
+    --text-tooltip: #1f2937; /* gray-800 */
+  
+    /* Bordes */
+    --border-base: #374151; /* gray-700 */
+    --border-input: #4b5563; /* gray-600 */
+    --border-input-focus: #818cf8; /* indigo-400 */
+    --border-divider: #374151; /* gray-700 */
+    --border-chat-error: #b91c1c; /* red-700 */
+    --border-success: rgba(5, 150, 105, 0.5); /* green-700/50 */
+    --border-error-notification: rgba(190, 18, 60, 0.5); /* red-700/50 */
+  
+    /* Login Fondo Animado */
+    --login-bg-color-1: #111827; /* gray-900 */
+    --login-bg-color-2: #1F2937; /* gray-800 */
+    --login-bg-color-3: #312E81; /* indigo-900 - 'rayo' */
+    --login-form-bg: rgba(31, 41, 55, 0.8); /* gray-800/80 */
+    --login-form-border: rgba(55, 65, 81, 0.5); /* gray-700/50 */
+  }
+  
+  /* 2. Clases Semánticas de Utilidad */
+  
+  /* Fondos */
+  .bg-base { background-color: var(--bg-base); }
+  .bg-surface { background-color: var(--bg-surface); }
+  .bg-sidebar { background-color: var(--bg-sidebar); }
+  .bg-input { background-color: var(--bg-input); }
+  .bg-button-primary { background-color: var(--bg-button-primary); color: var(--text-button-primary); }
+  .bg-button-primary:hover:not(:disabled) { background-color: var(--bg-button-primary-hover); }
+  .bg-button-secondary { background-color: var(--bg-button-secondary); color: var(--text-button-secondary); }
+  .bg-button-secondary:hover:not(:disabled) { background-color: var(--bg-button-secondary-hover); }
+  .bg-chat-user { background-color: var(--bg-chat-user); color: var(--text-chat-user); }
+  .bg-chat-model { background-color: var(--bg-chat-model); color: var(--text-chat-model); }
+  .bg-chat-error { background-color: var(--bg-chat-error); color: var(--text-chat-error); }
+  .bg-code-block { background-color: var(--bg-code-block); }
+  .bg-code-inline { background-color: var(--bg-code-inline); padding: 0.1em 0.3em; border-radius: 0.2em; }
+  .bg-modal-overlay { background-color: var(--bg-modal-overlay); }
+  .bg-active-item { background-color: var(--bg-active-item); }
+  .bg-hover-item:hover { background-color: var(--bg-hover-item); }
+  .bg-success-notification { background-color: var(--bg-success); }
+  .bg-error-notification { background-color: var(--bg-error-notification); }
+  
+  /* Texto */
+  .text-base { color: var(--text-base); }
+  .text-muted { color: var(--text-muted); }
+  .text-primary { color: var(--text-primary); }
+  .text-secondary { color: var(--text-secondary); }
+  .text-accent { color: var(--text-accent); }
+  .text-accent-hover:hover { color: var(--text-accent-hover); }
+  .text-error { color: var(--text-error); }
+  .text-success { color: var(--text-success); }
+  .text-link { color: var(--text-link); }
+  .text-link:hover { text-decoration: underline; }
+  .text-button-primary { color: var(--text-button-primary); }
+  .text-button-secondary { color: var(--text-button-secondary); }
+  
+  /* Bordes */
+  .border-base { border: 1px solid var(--border-base); }
+  .border-input { border: 1px solid var(--border-input); }
+  .border-divider { border-color: var(--border-divider); } /* Para usar con border-t, border-b, etc. de Tailwind */
+  .border-chat-error { border: 1px solid var(--border-chat-error); }
+  .border-success-notification { border: 1px solid var(--border-success); }
+  .border-error-notification { border: 1px solid var(--border-error-notification); }
+  
+  /* Foco (Ejemplo para inputs, adaptar según necesidad) */
+  .input-focus:focus {
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    border-color: var(--border-input-focus) !important; /* !important puede ser necesario para sobreescribir */
+    box-shadow: 0 0 0 1px var(--border-input-focus); /* Simula ring */
+  }
+  
+  /* Placeholder */
+  .placeholder\:text-muted::placeholder {
+      color: var(--text-muted);
+      opacity: 1; /* Firefox */
+  }
+  
+  /* Deshabilitado */
+  :disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+  }
+  .button-disabled:disabled { /* Clase específica para botones si :disabled no es suficiente */
+      opacity: 0.5;
+      cursor: not-allowed;
+  }
+  
+  /* Scrollbar (Opcional, si no usas plugin Tailwind) */
+  .custom-scrollbar { scrollbar-width: thin; scrollbar-color: var(--text-muted) transparent; }
+  .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px;}
+  .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb { background-color: var(--text-muted); border-radius: 20px; border: 3px solid transparent; }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: var(--text-secondary); }
+  
+  
+  /* Estilos base para Markdown (si no usas @tailwindcss/typography) */
+  .markdown-content h1, .markdown-content h2, .markdown-content h3 { color: var(--text-primary); margin-top: 1em; margin-bottom: 0.5em; font-weight: 600; }
+  .markdown-content p { color: var(--text-base); margin-bottom: 0.75em; line-height: 1.6; }
+  .markdown-content ul, .markdown-content ol { color: var(--text-base); margin-left: 1.5em; margin-bottom: 0.75em; }
+  .markdown-content li { margin-bottom: 0.25em; }
+  .markdown-content a { color: var(--text-link); text-decoration: underline; }
+  .markdown-content code:not(pre code) { background-color: var(--bg-code-inline); padding: 0.2em 0.4em; font-size: 85%; border-radius: 3px; color: var(--text-primary); }
+  .markdown-content pre { background-color: var(--bg-code-block); padding: 0.75em; border-radius: 4px; overflow-x: auto; margin-bottom: 1em; }
+  .markdown-content pre code { background-color: transparent; padding: 0; font-size: 85%; color: var(--text-base); }
+  .markdown-content blockquote { border-left: 4px solid var(--border-divider); padding-left: 1em; margin-left: 0; margin-right: 0; color: var(--text-muted); }
+  .markdown-content table { border-collapse: collapse; margin-bottom: 1em; width: auto; }
+  .markdown-content th, .markdown-content td { border: 1px solid var(--border-base); padding: 0.5em; color: var(--text-base); }
+  .markdown-content th { background-color: var(--bg-input); font-weight: 600; }
+  
+  /* --- END OF FILE src/theme.css --- */

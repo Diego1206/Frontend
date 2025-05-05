@@ -1,0 +1,29 @@
+/* Animación de movimiento */
+@keyframes loginBgAnimation {
+  0%   { background-position: 100% 100%; } /* Empieza abajo-derecha */
+  50%  { background-position: 0% 0%; }     /* Va a arriba-izquierda */
+  100% { background-position: 100% 100%; } /* Vuelve abajo-derecha */
+}
+
+/* Clase para el fondo animado - Usa las variables CSS definidas en theme.css */
+.login-animated-bg {
+  background: repeating-linear-gradient(
+    45deg,
+    var(--login-bg-color-1), /* Color 1 del tema */
+    var(--login-bg-color-1) 48%,
+    var(--login-bg-color-3), /* Color 3 (el 'rayo') del tema */
+    var(--login-bg-color-3) 51%,
+    var(--login-bg-color-2), /* Color 2 del tema */
+    var(--login-bg-color-2) 100%
+  );
+  background-size: 350% 350%; /* Tamaño del patrón */
+  animation: loginBgAnimation 18s linear infinite; /* Aplicar animación */
+
+  /* Propiedades de Layout */
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem; /* Añadir padding por si acaso */
+}
+
