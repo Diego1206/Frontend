@@ -1,4 +1,4 @@
-// --- START OF FILE Chat.jsx ---
+// --- START OF FILE Chat.jsx (Con setError corregido) ---
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from 'react-markdown';
@@ -28,12 +28,12 @@ const Chat = ({
     leerEnVozAltaActivado,
     toggleMobileMenu,
 }) => {
-    const [cargando, setCargando] = useState(false); // Cambiado a setCargando
-    const [error, setError] = useState(""); 
-    const [prompt, setPrompt] = useState(""); // Cambiado a setPrompt
-    const [modeloSeleccionado, setModeloSeleccionado] = useState(MODELO_POR_DEFECTO_FRONTEND); // Cambiado a setModeloSeleccionado
-    const [idMensajeHablando, setIdMensajeHablando] = useState(null); // Cambiado a setIdMensajeHablando
-    const [ttsDisponible, setTtsDisponible] = useState(false); // Cambiado a setTtsDisponible
+    const [cargando, setCargando] = useState(false);
+    const [error, setError] = useState(""); // Corregido aquí para usar setError consistentemente
+    const [prompt, setPrompt] = useState("");
+    const [modeloSeleccionado, setModeloSeleccionado] = useState(MODELO_POR_DEFECTO_FRONTEND);
+    const [idMensajeHablando, setIdMensajeHablando] = useState(null);
+    const [ttsDisponible, setTtsDisponible] = useState(false);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
     const refFinMensajes = useRef(null);
@@ -94,9 +94,8 @@ const Chat = ({
             }
             
             const timerId = setTimeout(() => {
-                if (conversacion.length > 0) { // Usar el estado 'conversacion' que es la dependencia del efecto
+                if (conversacion.length > 0) { 
                     const potentiallyNewLastMessage = conversacion[conversacion.length - 1];
-                    // Solo leer si el ultimoMensaje original sigue siendo el último mensaje real
                     if (ultimoMensaje.text === potentiallyNewLastMessage.text && ultimoMensaje.date === potentiallyNewLastMessage.date) {
                          const indexToSpeak = conversacion.indexOf(ultimoMensaje);
                          if(indexToSpeak !== -1) manejarHablarDetener(ultimoMensaje.text, indexToSpeak);
@@ -104,10 +103,10 @@ const Chat = ({
                 }
             }, 150);
     
-            refConversacionAnterior.current = [...currentConv]; // Actualizar la referencia con la copia actual
+            refConversacionAnterior.current = [...currentConv];
             return () => clearTimeout(timerId);
         }
-        refConversacionAnterior.current = [...currentConv]; // Asegurar que siempre se actualice
+        refConversacionAnterior.current = [...currentConv];
     }, [conversacion, leerEnVozAltaActivado, ttsDisponible, manejarHablarDetener]);    
 
     const desplazarHaciaAbajo = useCallback(() => {
@@ -132,7 +131,7 @@ const Chat = ({
     useEffect(() => { ajustarAlturaAreaTexto(); }, [prompt]);
 
     useEffect(() => {
-        if (indiceHistorialActivo === null) setPrompt(""); // Usar setPrompt
+        if (indiceHistorialActivo === null) setPrompt("");
         if (ttsDisponible && window.speechSynthesis.speaking) {
             window.speechSynthesis.cancel();
             if (refUtterance.current) { refUtterance.current.onend = null; refUtterance.current.onerror = null; }
@@ -144,7 +143,7 @@ const Chat = ({
 
     const handleGenerateImage = async (imagePromptText) => {
         setIsGeneratingImage(true);
-        setError(''); 
+        setError(''); // Usar setError
 
         try {
             const response = await fetch("https://chat-backend-y914.onrender.com/api/generate-image", {
@@ -204,18 +203,18 @@ const Chat = ({
         const archivosNuevosActuales = archivosPdfNuevos;
 
         if (!promptActual && archivosNuevosActuales.length === 0 && archivosSeleccionadosActuales.length === 0) {
-            setError(idioma === 'en' ? "Please write a message, or select/upload files." : "Por favor, escribe un mensaje o selecciona/sube archivos.");
+            setError(idioma === 'en' ? "Please write a message, or select/upload files." : "Por favor, escribe un mensaje o selecciona/sube archivos."); // Usar setError
             return;
         }
         if (ttsDisponible && window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); setIdMensajeHablando(null); if(refUtterance.current){refUtterance.current.onend=null;refUtterance.current.onerror=null;} refUtterance.current = null; }
         
-        setError("");
+        setError(""); // Usar setError
 
         const mensajeUsuario = { role: "user", text: promptActual, date: new Date(), esError: false };
         establecerConversacion(prev => [...prev, mensajeUsuario]);
         refConversacionAnterior.current = [...conversacion, mensajeUsuario]; 
         
-        const currentPromptValue = promptActual; // Capturar antes de limpiar
+        const currentPromptValue = promptActual;
         setPrompt("");
         ajustarAlturaAreaTexto();
 
@@ -226,14 +225,14 @@ const Chat = ({
                 const errorMsg = idioma === 'es' ? "Por favor, escribe un prompt después del comando /imagen." : "Please write a prompt after the /image command.";
                 const mensajeErrorCmd = { role: "model", text: errorMsg, date: new Date(), esError: true };
                 establecerConversacion(prev => [...prev, mensajeErrorCmd]);
-                desplazarHaciaAbajo(); // Asegurar que el error se vea
+                desplazarHaciaAbajo();
                 return;
             }
             await handleGenerateImage(imagePromptText);
             return;
         }
 
-        setCargando(true); // Usar setCargando
+        setCargando(true);
         try {
             const formData = new FormData();
             formData.append("prompt", currentPromptValue || (idioma === 'es' ? "Analiza los archivos adjuntos." : "Analyze the attached files."));
@@ -276,12 +275,12 @@ const Chat = ({
             const mensajeErrorParaChat = { role: "model", text: `${idioma === 'en' ? 'Error' : 'Error'}: ${textoError}`, esError: true, date: new Date() };
             establecerConversacion(prev => [...prev, mensajeErrorParaChat]);
         } finally {
-            setCargando(false); // Usar setCargando
+            setCargando(false);
             desplazarHaciaAbajo();
         }
     };
 
-    const manejarCambioModelo = (evento) => { setModeloSeleccionado(evento.target.value); }; // Usar setModeloSeleccionado
+    const manejarCambioModelo = (evento) => { setModeloSeleccionado(evento.target.value); };
     const manejarTeclaAbajo = (e) => {
          if (e.key === 'Enter' && !e.shiftKey && !(cargando || isGeneratingImage) ) {
              e.preventDefault();
