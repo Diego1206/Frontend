@@ -1,4 +1,4 @@
-// --- START OF FILE Chat.jsx (Revisado y con setError consistente) ---
+// --- START OF FILE Chat.jsx ---
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from 'react-markdown';
@@ -6,21 +6,21 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import { FaVolumeUp, FaVolumeMute, FaBars, FaPlayCircle, FaStopCircle } from 'react-icons/fa';
 
-const MODELOS_DISPONIBLES_TEXTO = { // Renombrado para claridad
+const MODELOS_DISPONIBLES_TEXTO = {
     "gemini-1.5-flash": "Gemini 1.5 Flash (Rápido)",
     "gemini-1.5-pro": "Gemini 1.5 Pro (Avanzado)",
 };
-const MODELO_TEXTO_POR_DEFECTO_FRONTEND = "gemini-1.5-flash"; // Renombrado
+const MODELO_TEXTO_POR_DEFECTO_FRONTEND = "gemini-1.5-flash";
 
 const Chat = ({
     conversacion,
-    establecerConversacion,
+    establecerConversacion, // ESTA ES LA PROP QUE RECIBES PARA ACTUALIZAR 'conversacion' en App.jsx
     listaArchivosUsuario,
     archivosPdfNuevos,
     manejarCambioArchivoInput,
     limpiarArchivosPdfNuevosYRefrescar,
     indiceHistorialActivo,
-    establecerIndiceHistorialActivo,
+    establecerIndiceHistorialActivo, // ESTA ES LA PROP QUE RECIBES PARA ACTUALIZAR 'idConversacionActiva' en App.jsx
     temperatura,
     topP,
     idioma,
@@ -28,10 +28,10 @@ const Chat = ({
     leerEnVozAltaActivado,
     toggleMobileMenu,
 }) => {
-    const [cargandoTexto, setCargandoTexto] = useState(false); // Específico para carga de texto
-    const [errorInput, setErrorInput] = useState(""); // Para errores de validación del input del prompt
+    const [cargandoTexto, setCargandoTexto] = useState(false); 
+    const [errorInput, setErrorInput] = useState(""); 
     const [prompt, setPrompt] = useState("");
-    const [modeloTextoSeleccionado, setModeloTextoSeleccionado] = useState(MODELO_TEXTO_POR_DEFECTO_FRONTEND); // Específico para modelo de texto
+    const [modeloTextoSeleccionado, setModeloTextoSeleccionado] = useState(MODELO_TEXTO_POR_DEFECTO_FRONTEND);
     const [idMensajeHablando, setIdMensajeHablando] = useState(null);
     const [ttsDisponible, setTtsDisponible] = useState(false);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -237,7 +237,7 @@ const Chat = ({
             const formData = new FormData();
             formData.append("prompt", currentPromptValue || (idioma === 'es' ? "Analiza los archivos adjuntos." : "Analyze the attached files."));
             if (indiceHistorialActivo !== null) formData.append("conversationId", indiceHistorialActivo.toString());
-            formData.append("modeloSeleccionado", modeloTextoSeleccionado); // Usar modelo de texto
+            formData.append("modeloSeleccionado", modeloTextoSeleccionado);
             formData.append("temperatura", temperatura.toString());
             formData.append("topP", topP.toString());
             formData.append("idioma", idioma);
@@ -395,7 +395,7 @@ const Chat = ({
                             <p className="text-xs text-muted">{idioma === 'en' ? 'Generating image...' : 'Generando imagen...'}</p>
                         </div>
                     )}
-                    {errorInput && !cargandoTexto && !isGeneratingImage && ( // Solo mostrar errorInput si no hay otras cargas
+                    {errorInput && !cargandoTexto && !isGeneratingImage && ( 
                        <div className="px-4 py-2 mt-4 text-center border rounded bg-error-notification border-error-notification">
                           <p className="text-xs text-error">{errorInput}</p>
                        </div>
