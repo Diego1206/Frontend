@@ -1,4 +1,4 @@
-// --- START OF FILE Chat.jsx (Con setError corregido) ---
+// --- START OF FILE Chat.jsx (Revisado y con setError consistente) ---
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from 'react-markdown';
@@ -6,11 +6,11 @@ import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
 import { FaVolumeUp, FaVolumeMute, FaBars, FaPlayCircle, FaStopCircle } from 'react-icons/fa';
 
-const MODELOS_DISPONIBLES = {
+const MODELOS_DISPONIBLES_TEXTO = { // Renombrado para claridad
     "gemini-1.5-flash": "Gemini 1.5 Flash (Rápido)",
     "gemini-1.5-pro": "Gemini 1.5 Pro (Avanzado)",
 };
-const MODELO_POR_DEFECTO_FRONTEND = "gemini-1.5-flash";
+const MODELO_TEXTO_POR_DEFECTO_FRONTEND = "gemini-1.5-flash"; // Renombrado
 
 const Chat = ({
     conversacion,
@@ -28,10 +28,10 @@ const Chat = ({
     leerEnVozAltaActivado,
     toggleMobileMenu,
 }) => {
-    const [cargando, setCargando] = useState(false);
-    const [error, setError] = useState(""); // Corregido aquí para usar setError consistentemente
+    const [cargandoTexto, setCargandoTexto] = useState(false); // Específico para carga de texto
+    const [errorInput, setErrorInput] = useState(""); // Para errores de validación del input del prompt
     const [prompt, setPrompt] = useState("");
-    const [modeloSeleccionado, setModeloSeleccionado] = useState(MODELO_POR_DEFECTO_FRONTEND);
+    const [modeloTextoSeleccionado, setModeloTextoSeleccionado] = useState(MODELO_TEXTO_POR_DEFECTO_FRONTEND); // Específico para modelo de texto
     const [idMensajeHablando, setIdMensajeHablando] = useState(null);
     const [ttsDisponible, setTtsDisponible] = useState(false);
     const [isGeneratingImage, setIsGeneratingImage] = useState(false);
@@ -143,7 +143,7 @@ const Chat = ({
 
     const handleGenerateImage = async (imagePromptText) => {
         setIsGeneratingImage(true);
-        setError(''); // Usar setError
+        setErrorInput(''); 
 
         try {
             const response = await fetch("https://chat-backend-y914.onrender.com/api/generate-image", {
@@ -196,19 +196,19 @@ const Chat = ({
 
     const enviarMensajeYGenerarRespuesta = async (e) => {
         if (e) e.preventDefault();
-        if (cargando || isGeneratingImage) return;
+        if (cargandoTexto || isGeneratingImage) return;
 
         const promptActual = prompt.trim();
         const archivosSeleccionadosActuales = listaArchivosUsuario.filter(f => f.seleccionado && !f.esNuevo).map(f => f.name);
         const archivosNuevosActuales = archivosPdfNuevos;
 
         if (!promptActual && archivosNuevosActuales.length === 0 && archivosSeleccionadosActuales.length === 0) {
-            setError(idioma === 'en' ? "Please write a message, or select/upload files." : "Por favor, escribe un mensaje o selecciona/sube archivos."); // Usar setError
+            setErrorInput(idioma === 'en' ? "Please write a message, or select/upload files." : "Por favor, escribe un mensaje o selecciona/sube archivos.");
             return;
         }
         if (ttsDisponible && window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); setIdMensajeHablando(null); if(refUtterance.current){refUtterance.current.onend=null;refUtterance.current.onerror=null;} refUtterance.current = null; }
         
-        setError(""); // Usar setError
+        setErrorInput("");
 
         const mensajeUsuario = { role: "user", text: promptActual, date: new Date(), esError: false };
         establecerConversacion(prev => [...prev, mensajeUsuario]);
@@ -232,12 +232,12 @@ const Chat = ({
             return;
         }
 
-        setCargando(true);
+        setCargandoTexto(true);
         try {
             const formData = new FormData();
             formData.append("prompt", currentPromptValue || (idioma === 'es' ? "Analiza los archivos adjuntos." : "Analyze the attached files."));
             if (indiceHistorialActivo !== null) formData.append("conversationId", indiceHistorialActivo.toString());
-            formData.append("modeloSeleccionado", modeloSeleccionado);
+            formData.append("modeloSeleccionado", modeloTextoSeleccionado); // Usar modelo de texto
             formData.append("temperatura", temperatura.toString());
             formData.append("topP", topP.toString());
             formData.append("idioma", idioma);
@@ -275,14 +275,14 @@ const Chat = ({
             const mensajeErrorParaChat = { role: "model", text: `${idioma === 'en' ? 'Error' : 'Error'}: ${textoError}`, esError: true, date: new Date() };
             establecerConversacion(prev => [...prev, mensajeErrorParaChat]);
         } finally {
-            setCargando(false);
+            setCargandoTexto(false);
             desplazarHaciaAbajo();
         }
     };
 
-    const manejarCambioModelo = (evento) => { setModeloSeleccionado(evento.target.value); };
+    const manejarCambioModeloTexto = (evento) => { setModeloTextoSeleccionado(evento.target.value); };
     const manejarTeclaAbajo = (e) => {
-         if (e.key === 'Enter' && !e.shiftKey && !(cargando || isGeneratingImage) ) {
+         if (e.key === 'Enter' && !e.shiftKey && !(cargandoTexto || isGeneratingImage) ) {
              e.preventDefault();
              enviarMensajeYGenerarRespuesta(null);
          }
@@ -305,9 +305,9 @@ const Chat = ({
                          <a href="https://united-its.com/" target="_blank" rel="noopener noreferrer" className="transition-colors text-link hover:underline">Asistencia United ITS</a>
                      </h1>
                      <div className="mt-1">
-                         <label htmlFor="selectorModelo" className="mr-2 text-xs align-middle text-muted">Modelo IA Texto:</label>
-                         <select id="selectorModelo" value={modeloSeleccionado} onChange={manejarCambioModelo} disabled={cargando || isGeneratingImage} className="p-1 text-xs align-middle rounded outline-none disabled:opacity-50 border bg-input text-primary border-input input-focus focus:ring-1 focus:ring-offset-0 focus:border-accent">
-                             {Object.entries(MODELOS_DISPONIBLES).map(([clave, etiqueta]) => ( <option key={clave} value={clave}>{etiqueta}</option> ))}
+                         <label htmlFor="selectorModeloTexto" className="mr-2 text-xs align-middle text-muted">Modelo IA Texto:</label>
+                         <select id="selectorModeloTexto" value={modeloTextoSeleccionado} onChange={manejarCambioModeloTexto} disabled={cargandoTexto || isGeneratingImage} className="p-1 text-xs align-middle rounded outline-none disabled:opacity-50 border bg-input text-primary border-input input-focus focus:ring-1 focus:ring-offset-0 focus:border-accent">
+                             {Object.entries(MODELOS_DISPONIBLES_TEXTO).map(([clave, etiqueta]) => ( <option key={clave} value={clave}>{etiqueta}</option> ))}
                          </select>
                      </div>
                  </div>
@@ -327,7 +327,7 @@ const Chat = ({
 
              <div ref={refContenedorScroll} className="flex-1 p-4 overflow-y-auto sm:p-6 bg-base custom-scrollbar">
                  <div className="space-y-4">
-                     {conversacion.length === 0 && !cargando && !isGeneratingImage ? (
+                     {conversacion.length === 0 && !cargandoTexto && !isGeneratingImage ? (
                          <p className="pt-4 text-sm text-center text-muted">{idioma === 'en' ? 'Start the conversation... (Try /image your_prompt)' : 'Inicia la conversación... (Prueba /imagen tu_prompt)'}</p>
                      ) : (
                          conversacion.map((mensaje, index) => {
@@ -383,7 +383,7 @@ const Chat = ({
                         })
                      )}
 
-                     {cargando && (
+                     {cargandoTexto && (
                         <div className="flex items-center justify-center mt-4 space-x-2">
                             <div className="w-4 h-4 border-b-2 rounded-full animate-spin border-muted"></div>
                             <p className="text-xs text-muted">{idioma === 'en' ? 'Thinking...' : 'Pensando...'}</p>
@@ -395,9 +395,9 @@ const Chat = ({
                             <p className="text-xs text-muted">{idioma === 'en' ? 'Generating image...' : 'Generando imagen...'}</p>
                         </div>
                     )}
-                    {error && !cargando && !isGeneratingImage && (
+                    {errorInput && !cargandoTexto && !isGeneratingImage && ( // Solo mostrar errorInput si no hay otras cargas
                        <div className="px-4 py-2 mt-4 text-center border rounded bg-error-notification border-error-notification">
-                          <p className="text-xs text-error">{error}</p>
+                          <p className="text-xs text-error">{errorInput}</p>
                        </div>
                     )}
                     <div ref={refFinMensajes} style={{ height: "1px" }} />
@@ -406,20 +406,20 @@ const Chat = ({
 
             <form onSubmit={enviarMensajeYGenerarRespuesta} className="flex items-end flex-shrink-0 gap-2 p-3 border-t border-divider bg-surface">
                  <div className="flex-shrink-0 self-end">
-                      <input type="file" accept=".pdf" multiple onChange={manejarCambioArchivoInput} disabled={cargando || isGeneratingImage} className="hidden" id="inputArchivoPdf" />
-                      <label htmlFor="inputArchivoPdf" title={conteoArchivosMostrados > 0 ? `${conteoArchivosMostrados} ${idioma === 'es' ? 'archivo(s)' : 'file(s)'}` : (idioma === 'es' ? 'Seleccionar PDF' : 'Select PDF')} className={`relative cursor-pointer p-2.5 rounded-lg transition-all inline-block text-secondary ${ (cargando || isGeneratingImage) ? 'bg-input opacity-50 cursor-not-allowed' : 'bg-button-secondary hover:bg-button-secondary-hover' }`} aria-disabled={cargando || isGeneratingImage}>
+                      <input type="file" accept=".pdf" multiple onChange={manejarCambioArchivoInput} disabled={cargandoTexto || isGeneratingImage} className="hidden" id="inputArchivoPdf" />
+                      <label htmlFor="inputArchivoPdf" title={conteoArchivosMostrados > 0 ? `${conteoArchivosMostrados} ${idioma === 'es' ? 'archivo(s)' : 'file(s)'}` : (idioma === 'es' ? 'Seleccionar PDF' : 'Select PDF')} className={`relative cursor-pointer p-2.5 rounded-lg transition-all inline-block text-secondary ${ (cargandoTexto || isGeneratingImage) ? 'bg-input opacity-50 cursor-not-allowed' : 'bg-button-secondary hover:bg-button-secondary-hover' }`} aria-disabled={cargandoTexto || isGeneratingImage}>
                            📄
                            {conteoArchivosMostrados > 0 && ( <span className="absolute flex items-center justify-center w-5 h-5 text-[10px] font-semibold text-white bg-green-600 rounded-full shadow -top-1 -right-1"> {conteoArchivosMostrados} </span> )}
                       </label>
                   </div>
                  <textarea
-                     ref={refAreaTexto} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={idioma === 'en' ? "Type message or /image prompt..." : "Escribe mensaje o /imagen prompt..."} disabled={cargando || isGeneratingImage}
+                     ref={refAreaTexto} value={prompt} onChange={(e) => setPrompt(e.target.value)} placeholder={idioma === 'en' ? "Type message or /image prompt..." : "Escribe mensaje o /imagen prompt..."} disabled={cargandoTexto || isGeneratingImage}
                      className="flex-grow px-3 py-2.5 resize-none overflow-y-auto rounded-lg focus:outline-none disabled:opacity-50 border bg-input text-primary border-input focus:ring-1 focus:ring-offset-0 focus:border-accent custom-scrollbar placeholder:text-muted"
                      rows={1} style={{ maxHeight: '120px', minHeight: '44px' }} onInput={ajustarAlturaAreaTexto} onKeyDown={manejarTeclaAbajo}
                      aria-label={idioma === 'en' ? 'Chat input' : 'Entrada de chat'}
                  />
-                  <button type="submit" disabled={cargando || isGeneratingImage || (!prompt.trim() && conteoArchivosMostrados === 0)} className="self-end flex-shrink-0 px-5 py-2.5 font-semibold rounded-lg transition-all bg-button-primary text-button-primary button-disabled hover:bg-button-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface focus:ring-indigo-500" title={idioma === 'en' ? "Send" : "Enviar"}>
-                     {(cargando || isGeneratingImage) ? "⏳" : <span className="text-lg leading-none">➤</span>}
+                  <button type="submit" disabled={cargandoTexto || isGeneratingImage || (!prompt.trim() && conteoArchivosMostrados === 0)} className="self-end flex-shrink-0 px-5 py-2.5 font-semibold rounded-lg transition-all bg-button-primary text-button-primary button-disabled hover:bg-button-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface focus:ring-indigo-500" title={idioma === 'en' ? "Send" : "Enviar"}>
+                     {(cargandoTexto || isGeneratingImage) ? "⏳" : <span className="text-lg leading-none">➤</span>}
                   </button>
              </form>
         </div>
