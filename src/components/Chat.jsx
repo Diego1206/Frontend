@@ -29,7 +29,7 @@ const Chat = ({
     toggleMobileMenu,
 }) => {
     const [cargando, establecerCargando] = useState(false);
-    const [error, setError] = useState(""); // <--- Declarado como setError
+    const [error, establecerError] = useState("");
     const [prompt, establecerPrompt] = useState("");
     const [modeloSeleccionado, establecerModeloSeleccionado] = useState(MODELO_POR_DEFECTO_FRONTEND);
     const [idMensajeHablando, setIdMensajeHablando] = useState(null);
@@ -47,25 +47,23 @@ const Chat = ({
         else { console.warn("Chat.jsx: API Web Speech no soportada."); }
         return () => {
              if (window.speechSynthesis && window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); }
-             if (refUtterance.current) { refUtterance.current.onend = null; refUtterance.current.onerror = null; }
              refUtterance.current = null; setIdMensajeHablando(null);
-        };
+        }
     }, []);
 
     const manejarHablarDetener = useCallback((texto, indiceMensaje) => {
-        if (!ttsDisponible || !texto || typeof texto !== 'string') return;
+        if (!ttsDisponible || !texto) return;
         const synth = window.speechSynthesis;
         if (synth.speaking && idMensajeHablando === indiceMensaje) {
-            synth.cancel(); setIdMensajeHablando(null); if(refUtterance.current){refUtterance.current.onend=null; refUtterance.current.onerror=null;} refUtterance.current = null; return;
+            synth.cancel(); setIdMensajeHablando(null); refUtterance.current = null; return;
         }
-        if (synth.speaking) { synth.cancel(); if(refUtterance.current){refUtterance.current.onend=null; refUtterance.current.onerror=null;} }
-        
+        if (synth.speaking) { synth.cancel(); }
         try {
             const utterance = new SpeechSynthesisUtterance(texto);
             refUtterance.current = utterance;
             utterance.lang = idioma === 'es' ? 'es-ES' : 'en-US';
-            utterance.onend = () => { if (refUtterance.current === utterance) { setIdMensajeHablando(null); refUtterance.current = null; }};
-            utterance.onerror = (event) => { console.error("Chat.jsx: Error SpeechSynthesis:", event.error); if (refUtterance.current === utterance) { setIdMensajeHablando(null); refUtterance.current = null; }};
+            utterance.onend = () => { if (refUtterance.current === utterance) { setIdMensajeHablando(null); refUtterance.current = null; } };
+            utterance.onerror = (event) => { console.error("Chat.jsx: Error SpeechSynthesis:", event.error); if (refUtterance.current === utterance) { setIdMensajeHablando(null); refUtterance.current = null; } };
             setIdMensajeHablando(indiceMensaje);
             synth.speak(utterance);
         } catch (e) {
@@ -75,39 +73,47 @@ const Chat = ({
     }, [ttsDisponible, idioma, idMensajeHablando]);
 
     useEffect(() => {
-        const currentConv = conversacion;
-        const prevConv = refConversacionAnterior.current;
+        const currentConvLength = conversacion.length;
+        const prevConvLength = refConversacionAnterior.current.length;
     
-        if (!leerEnVozAltaActivado || !ttsDisponible || currentConv.length === 0 || currentConv.length === prevConv.length) {
-            refConversacionAnterior.current = [...currentConv];
+        if (!leerEnVozAltaActivado || !ttsDisponible || currentConvLength === 0 || currentConvLength === prevConvLength) {
+            refConversacionAnterior.current = [...conversacion];
             return;
         }
     
-        const ultimoMensaje = currentConv[currentConv.length - 1];
+        const ultimoMensaje = conversacion[currentConvLength - 1];
     
         if (ultimoMensaje && ultimoMensaje.role === 'model' && !ultimoMensaje.esError && ultimoMensaje.text && !ultimoMensaje.isImage) {
             if (window.speechSynthesis.speaking) {
                 window.speechSynthesis.cancel();
-                if (refUtterance.current) { refUtterance.current.onend = null; refUtterance.current.onerror = null; }
+                if (refUtterance.current) {
+                    refUtterance.current.onend = null;
+                    refUtterance.current.onerror = null;
+                }
                 refUtterance.current = null;
                 setIdMensajeHablando(null);
             }
             
             const timerId = setTimeout(() => {
-                if (conversacion.length > 0) {
-                    const potentiallyNewLastMessage = conversacion[conversacion.length - 1];
+                // Re-evaluar el último mensaje aquí por si la conversación cambió muy rápido
+                const latestConversation = conversacion; // O pasarlo como dependencia si es más seguro
+                if (latestConversation.length > 0) {
+                    const potentiallyNewLastMessage = latestConversation[latestConversation.length - 1];
                     if (ultimoMensaje.text === potentiallyNewLastMessage.text && ultimoMensaje.date === potentiallyNewLastMessage.date) {
-                         const indexToSpeak = conversacion.indexOf(ultimoMensaje);
-                         if(indexToSpeak !== -1) manejarHablarDetener(ultimoMensaje.text, indexToSpeak);
+                        const indexToSpeak = latestConversation.indexOf(ultimoMensaje);
+                        if (indexToSpeak !== -1) { // Asegurarse que el mensaje todavía existe
+                           manejarHablarDetener(ultimoMensaje.text, indexToSpeak);
+                        }
                     }
                 }
-            }, 150);
+            }, 150); // Un pequeño delay
     
-            refConversacionAnterior.current = [...currentConv];
+            refConversacionAnterior.current = [...conversacion];
             return () => clearTimeout(timerId);
         }
-        refConversacionAnterior.current = [...currentConv];
-    }, [conversacion, leerEnVozAltaActivado, ttsDisponible, manejarHablarDetener]);    
+        refConversacionAnterior.current = [...conversacion];
+    }, [conversacion, leerEnVozAltaActivado, ttsDisponible, manejarHablarDetener]);
+    
 
     const desplazarHaciaAbajo = useCallback(() => {
         requestAnimationFrame(() => {
@@ -117,24 +123,14 @@ const Chat = ({
         });
     }, []);
 
-    const ajustarAlturaAreaTexto = () => { 
-        const areaTexto = refAreaTexto.current; 
-        if (areaTexto) { 
-            areaTexto.style.height = 'auto'; 
-            const scrollHeight = areaTexto.scrollHeight; 
-            const maxHeight = 120; 
-            areaTexto.style.height = `${Math.min(scrollHeight, maxHeight)}px`; 
-        } 
-    };
+    const ajustarAlturaAreaTexto = () => { const areaTexto = refAreaTexto.current; if (areaTexto) { areaTexto.style.height = 'auto'; const scrollHeight = areaTexto.scrollHeight; const maxHeight = 120; areaTexto.style.height = `${Math.min(scrollHeight, maxHeight)}px`; } };
 
     useEffect(() => { desplazarHaciaAbajo(); }, [conversacion, desplazarHaciaAbajo]);
     useEffect(() => { ajustarAlturaAreaTexto(); }, [prompt]);
-
     useEffect(() => {
         if (indiceHistorialActivo === null) establecerPrompt("");
         if (ttsDisponible && window.speechSynthesis.speaking) {
             window.speechSynthesis.cancel();
-            if (refUtterance.current) { refUtterance.current.onend = null; refUtterance.current.onerror = null; }
             setIdMensajeHablando(null);
             refUtterance.current = null;
         }
@@ -143,7 +139,7 @@ const Chat = ({
 
     const handleGenerateImage = async (imagePromptText) => {
         setIsGeneratingImage(true);
-        setError(''); // <--- CORREGIDO: Usar setError
+        establecerError(''); 
 
         try {
             const response = await fetch("https://chat-backend-y914.onrender.com/api/generate-image", {
@@ -166,10 +162,10 @@ const Chat = ({
                 };
                 establecerConversacion(prev => [...prev, mensajeImagenBot]);
             } else {
-                const errorMsg = data.error || (idioma === 'es' ? 'No se pudo generar la imagen o la respuesta del servidor fue inválida.' : 'Could not generate image or server response was invalid.');
+                const errorMsg = data.error || (idioma === 'es' ? 'No se pudo generar la imagen o la respuesta fue inválida.' : 'Could not generate image or response was invalid.');
                 const mensajeErrorBot = {
                     role: "model",
-                    text: `${idioma === 'es' ? 'Error al generar imagen' : 'Error generating image'}: ${errorMsg}`,
+                    text: `${idioma === 'es' ? 'Error generando imagen' : 'Error generating image'}: ${errorMsg}`,
                     date: new Date(),
                     esError: true
                 };
@@ -179,7 +175,7 @@ const Chat = ({
             console.error("Error al solicitar generación de imagen (catch):", error);
             let errorTextToShow = idioma === 'es' ? 'Error de red o del servidor al generar imagen.' : 'Network or server error while generating image.';
             if(error instanceof SyntaxError){
-                errorTextToShow = idioma === 'es' ? 'Respuesta inesperada del servidor al intentar generar imagen (no es JSON).' : 'Unexpected server response when generating image (not JSON).';
+                errorTextToShow = idioma === 'es' ? 'Respuesta inesperada del servidor al generar imagen.' : 'Unexpected server response when generating image.';
             }
             const mensajeErrorRed = {
                 role: "model",
@@ -203,29 +199,29 @@ const Chat = ({
         const archivosNuevosActuales = archivosPdfNuevos;
 
         if (!promptActual && archivosNuevosActuales.length === 0 && archivosSeleccionadosActuales.length === 0) {
-            setError(idioma === 'en' ? "Please write a message, or select/upload files." : "Por favor, escribe un mensaje o selecciona/sube archivos."); // <--- CORREGIDO
+            establecerError(idioma === 'en' ? "Please write a message, or select/upload files." : "Por favor, escribe un mensaje o selecciona/sube archivos.");
             return;
         }
-        if (ttsDisponible && window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); setIdMensajeHablando(null); if(refUtterance.current){refUtterance.current.onend=null;refUtterance.current.onerror=null;} refUtterance.current = null; }
+        if (ttsDisponible && window.speechSynthesis.speaking) { window.speechSynthesis.cancel(); setIdMensajeHablando(null); if(refUtterance.current) {refUtterance.current.onend=null; refUtterance.current.onerror=null;} refUtterance.current = null; }
         
-        setError(""); // <--- CORREGIDO: Limpiar error global del input
+        establecerError("");
 
         const mensajeUsuario = { role: "user", text: promptActual, date: new Date(), esError: false };
         establecerConversacion(prev => [...prev, mensajeUsuario]);
+        // Actualizar refConversacionAnterior aquí para que handleGenerateImage tenga la versión más reciente si es necesario
         refConversacionAnterior.current = [...conversacion, mensajeUsuario]; 
         
-        const currentPrompt = promptActual;
         establecerPrompt("");
         ajustarAlturaAreaTexto();
+        // No llamar a desplazarHaciaAbajo aquí, se hará en el finally o después de la respuesta
 
-        if (currentPrompt.toLowerCase().startsWith("/imagen ") || currentPrompt.toLowerCase().startsWith("/image ")) {
-            const imageCommand = currentPrompt.toLowerCase().startsWith("/imagen ") ? "/imagen " : "/image ";
-            const imagePromptText = currentPrompt.substring(imageCommand.length).trim();
+        if (promptActual.toLowerCase().startsWith("/imagen ") || promptActual.toLowerCase().startsWith("/image ")) {
+            const imageCommand = promptActual.toLowerCase().startsWith("/imagen ") ? "/imagen " : "/image ";
+            const imagePromptText = promptActual.substring(imageCommand.length).trim();
             if (!imagePromptText) {
-                const errorMsg = idioma === 'es' ? "Por favor, escribe un prompt después del comando /imagen." : "Please write a prompt after the /image command.";
-                // Ya no usamos setError aquí, el error se muestra como mensaje en el chat
+                const errorMsg = idioma === 'es' ? "Por favor, escribe un prompt después de /imagen." : "Please write a prompt after /image.";
                 const mensajeErrorCmd = { role: "model", text: errorMsg, date: new Date(), esError: true };
-                establecerConversacion(prev => [...prev, mensajeErrorCmd]);
+                establecerConversacion(prev => [...prev, mensajeErrorCmd]); // Añadir al estado global de conversación
                 desplazarHaciaAbajo();
                 return;
             }
@@ -236,7 +232,7 @@ const Chat = ({
         establecerCargando(true);
         try {
             const formData = new FormData();
-            formData.append("prompt", currentPrompt || (idioma === 'es' ? "Analiza los archivos adjuntos." : "Analyze the attached files."));
+            formData.append("prompt", promptActual || (idioma === 'es' ? "Analiza los archivos adjuntos." : "Analyze the attached files."));
             if (indiceHistorialActivo !== null) formData.append("conversationId", indiceHistorialActivo.toString());
             formData.append("modeloSeleccionado", modeloSeleccionado);
             formData.append("temperatura", temperatura.toString());
@@ -251,7 +247,8 @@ const Chat = ({
             const datos = await respuesta.json();
 
             if (!respuesta.ok) {
-                throw new Error(datos.error || `Error ${respuesta.status} del servidor`);
+                let mensajeError = datos.error || `Error ${respuesta.status}`;
+                throw new Error(mensajeError);
             }
 
             const esRespuestaError = !datos.respuesta || datos.respuesta.toLowerCase().includes("lo siento") || datos.respuesta.toLowerCase().includes("i'm sorry") || datos.respuesta.toLowerCase().includes("error");
@@ -267,12 +264,7 @@ const Chat = ({
             }
         } catch (errorCapturado) {
             console.error("Error en enviarMensajeYGenerarRespuesta (texto):", errorCapturado);
-            let textoError = idioma === 'en' ? "An unexpected error occurred." : "Ocurrió un error inesperado.";
-            if (errorCapturado instanceof SyntaxError) {
-                textoError = idioma === 'en' ? "Received an unreadable response from the server." : "Se recibió una respuesta ilegible del servidor.";
-            } else if (errorCapturado.message) {
-                textoError = errorCapturado.message;
-            }
+            const textoError = errorCapturado.message || (idioma === 'en' ? "An unexpected error occurred." : "Ocurrió un error inesperado.");
             const mensajeErrorParaChat = { role: "model", text: `${idioma === 'en' ? 'Error' : 'Error'}: ${textoError}`, esError: true, date: new Date() };
             establecerConversacion(prev => [...prev, mensajeErrorParaChat]);
         } finally {
@@ -306,7 +298,7 @@ const Chat = ({
                          <a href="https://united-its.com/" target="_blank" rel="noopener noreferrer" className="transition-colors text-link hover:underline">Asistencia United ITS</a>
                      </h1>
                      <div className="mt-1">
-                         <label htmlFor="selectorModelo" className="mr-2 text-xs align-middle text-muted">Modelo IA Texto:</label>
+                         <label htmlFor="selectorModelo" className="mr-2 text-xs align-middle text-muted">Modelo IA:</label>
                          <select id="selectorModelo" value={modeloSeleccionado} onChange={manejarCambioModelo} disabled={cargando || isGeneratingImage} className="p-1 text-xs align-middle rounded outline-none disabled:opacity-50 border bg-input text-primary border-input input-focus focus:ring-1 focus:ring-offset-0 focus:border-accent">
                              {Object.entries(MODELOS_DISPONIBLES).map(([clave, etiqueta]) => ( <option key={clave} value={clave}>{etiqueta}</option> ))}
                          </select>
@@ -332,13 +324,11 @@ const Chat = ({
                          <p className="pt-4 text-sm text-center text-muted">{idioma === 'en' ? 'Start the conversation... (Try /image your_prompt)' : 'Inicia la conversación... (Prueba /imagen tu_prompt)'}</p>
                      ) : (
                          conversacion.map((mensaje, index) => {
-                            const messageKey = `${mensaje.role}-${mensaje.date instanceof Date ? mensaje.date.getTime() : mensaje.date}-${index}-${Math.random()}`; // Key más única
-
-                            if (!mensaje || typeof mensaje.role === 'undefined') return <li key={messageKey}></li>;
+                            if (!mensaje || typeof mensaje.role === 'undefined') return <li key={`empty-${index}-${Math.random()}`}></li>;
 
                             if (mensaje.isImage && mensaje.imageUrl) {
                                 return (
-                                    <div key={messageKey} className={`group flex items-start justify-start`}>
+                                    <div key={`${index}-img`} className={`group flex items-start justify-start`}>
                                         <div className="pt-1 mr-2 text-xl flex-shrink-0 self-start text-accent">🖼️</div>
                                         <div className={`p-3 rounded-lg max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl shadow break-words bg-chat-model text-chat-model rounded-bl-none`}>
                                             <img src={mensaje.imageUrl} alt={mensaje.text || (idioma === 'es' ? "Imagen generada" : "Generated image")} className="max-w-full h-auto rounded-md mb-1" />
@@ -349,7 +339,7 @@ const Chat = ({
                             }
                             
                             return (
-                                <div key={messageKey} className={`group flex items-start ${mensaje.role === "user" ? "justify-end" : "justify-start"}`}>
+                                <div key={`${index}-txt`} className={`group flex items-start ${mensaje.role === "user" ? "justify-end" : "justify-start"}`}>
                                     {mensaje.role === "model" && !mensaje.esError && ( <div className="pt-1 mr-2 text-xl flex-shrink-0 self-start text-accent">🤖</div> )}
                                     {mensaje.role === "model" && mensaje.esError && ( <div className="pt-1 mr-2 text-xl flex-shrink-0 self-start text-error">⚠️</div> )}
                                     <div className={`flex items-end ${mensaje.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
@@ -396,7 +386,6 @@ const Chat = ({
                             <p className="text-xs text-muted">{idioma === 'en' ? 'Generating image...' : 'Generando imagen...'}</p>
                         </div>
                     )}
-                    {/* El estado 'error' ahora es para errores del input, no para mostrar errores de API en el chat */}
                     {error && !cargando && !isGeneratingImage && (
                        <div className="px-4 py-2 mt-4 text-center border rounded bg-error-notification border-error-notification">
                           <p className="text-xs text-error">{error}</p>
@@ -406,7 +395,8 @@ const Chat = ({
                  </div>
              </div>
 
-            <form onSubmit={enviarMensajeYGenerarRespuesta} className="flex items-end flex-shrink-0 gap-2 p-3 border-t border-divider bg-surface">
+            {/* Formulario de Envío */}
+             <form onSubmit={enviarMensajeYGenerarRespuesta} className="flex items-end flex-shrink-0 gap-2 p-3 border-t border-divider bg-surface">
                  <div className="flex-shrink-0 self-end">
                       <input type="file" accept=".pdf" multiple onChange={manejarCambioArchivoInput} disabled={cargando || isGeneratingImage} className="hidden" id="inputArchivoPdf" />
                       <label htmlFor="inputArchivoPdf" title={conteoArchivosMostrados > 0 ? `${conteoArchivosMostrados} ${idioma === 'es' ? 'archivo(s)' : 'file(s)'}` : (idioma === 'es' ? 'Seleccionar PDF' : 'Select PDF')} className={`relative cursor-pointer p-2.5 rounded-lg transition-all inline-block text-secondary ${ (cargando || isGeneratingImage) ? 'bg-input opacity-50 cursor-not-allowed' : 'bg-button-secondary hover:bg-button-secondary-hover' }`} aria-disabled={cargando || isGeneratingImage}>
