@@ -31,8 +31,8 @@ export const App = () => {
     const [listaArchivosUsuario, setListaArchivosUsuario] = useState([]);
     const [archivosPdfNuevos, setArchivosPdfNuevos] = useState([]);
     const [idConversacionActiva, setIdConversacionActiva] = useState(null);
-    const [panelLateralAbierto, setPanelLateralAbierto] = useState(true); // For Desktop
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // For Mobile
+    const [panelLateralAbierto, setPanelLateralAbierto] = useState(true); 
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
     const [leerEnVozAltaActivado, setLeerEnVozAltaActivado] = useState(false);
 
     const [temperatura, setTemperatura] = useState(() => {
@@ -105,38 +105,38 @@ export const App = () => {
             setMensajesConversacionActiva([]); setIdConversacionActiva(null);
             return;
         };
-        console.log("[App] Cargando datos de usuario..."); // Log for debugging
+        console.log("[App] Cargando datos de usuario..."); 
         let huboErrorCarga = false;
         try {
             const [respuestaConv, respuestaArchivos] = await Promise.all([
-                 // --- MODIFIED: Use relative paths ---
+                 
                  fetch("https://chat-backend-y914.onrender.com/api/conversations", { credentials: 'include' }),
                  fetch("https://chat-backend-y914.onrender.com/api/files", { credentials: 'include' })
             ]);
 
             if (respuestaConv.ok) {
                 const datosConv = await respuestaConv.json();
-                console.log("[App] Conversaciones cargadas:", datosConv); // Log for debugging
+                console.log("[App] Conversaciones cargadas:", datosConv); 
                 setHistorialConversaciones(Array.isArray(datosConv) ? datosConv.map(c => ({ id: c.id, titulo: c.titulo })) : []);
             } else {
                 console.error("[Data Load] Error conv:", respuestaConv.status, respuestaConv.statusText);
                 setHistorialConversaciones([]); huboErrorCarga = true;
                  if (respuestaConv.status === 401 || respuestaConv.status === 403) {
                      console.log("[Data Load] Auth error cargando conversaciones, reverificando...");
-                     await verificarAutenticacion(); // Re-check auth if unauthorized
+                     await verificarAutenticacion(); 
                  }
             }
 
             if (respuestaArchivos.ok) {
                   const datosArchivos = await respuestaArchivos.json();
-                  console.log("[App] Archivos cargados:", datosArchivos); // Log for debugging
+                  console.log("[App] Archivos cargados:", datosArchivos); 
                   setListaArchivosUsuario(Array.isArray(datosArchivos) ? datosArchivos.map(f => ({ name: f.name, displayName: f.originalName, url: '', seleccionado: false, esNuevo: false })) : []);
             } else {
                   console.error("[Data Load] Error files:", respuestaArchivos.status, respuestaArchivos.statusText);
                   setListaArchivosUsuario([]); huboErrorCarga = true;
                   if (respuestaArchivos.status === 401 || respuestaArchivos.status === 403) {
                      console.log("[Data Load] Auth error cargando archivos, reverificando...");
-                     await verificarAutenticacion(); // Re-check auth if unauthorized
+                     await verificarAutenticacion(); 
                  }
             }
         } catch (error) {
@@ -186,7 +186,7 @@ export const App = () => {
             setIsMobileMenuOpen(false);
             console.log("[Logout] User logged out, state cleared.");
         }
-    }, []); // No dependencies needed here as it resets state
+    }, []); 
 
     const seleccionarArchivo = useCallback((nombreArchivoUnico) => {
         setListaArchivosUsuario(listaAnterior =>

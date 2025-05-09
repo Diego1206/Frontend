@@ -76,7 +76,7 @@ const Historial = ({
       ? historial.filter(item => item && item.titulo && item.titulo.toLowerCase().includes(terminoBusqueda.toLowerCase()))
       : historial;
   
-    // 🔥 Corrección aquí
+    // Corrección aquí
     const manejarClicHistorial = async (id) => {
       try {
         console.log("[Historial] Iniciando carga para Conv ID:", id);
@@ -98,10 +98,10 @@ const Historial = ({
         }
   
         const mensajesFormateados = data.map((mensaje) => ({
-            role: mensaje.rol === 'user' ? 'user' : 'model',    // 🔵 Conversión correcta
-            text: mensaje.texto || '',                          // 🟢 ATENCIÓN: coger "texto", no "contenido"
-            date: mensaje.fecha_envio || '',                    // 🟡 Fecha
-            esError: false,                                             // puedes poner false por defecto
+            role: mensaje.rol === 'user' ? 'user' : 'model',    // Conversión correcta
+            text: mensaje.texto || '',                          //  ATENCIÓN: coger "texto", no "contenido"
+            date: mensaje.fecha_envio || '',                    // Fecha
+            esError: false,                                   
           }));
   
         console.log("[Historial] Mensajes formateados:", mensajesFormateados);
@@ -110,7 +110,7 @@ const Historial = ({
           console.warn("[Historial] Conversación", id, "cargada, pero no tiene mensajes.");
         }
   
-        // ✅ Aquí corregimos bien: actualizar conversación
+        //  Aquí corregimos bien: actualizar conversación
         establecerConversacion(mensajesFormateados);
         establecerIndiceHistorialActivo(id);
   
@@ -135,7 +135,7 @@ const Historial = ({
         if (window.confirm(confirmMsg)) {
              if (indiceEditandoTitulo === idABorrar) { manejarCancelarEdicion(); }
             try {
-                // --- MODIFIED: Use relative path ---
+                
                 const response = await fetch(`https://chat-backend-y914.onrender.com/api/conversations/${idABorrar}`, { method: 'DELETE', credentials: 'include' });
                 if (response.ok) {
                     establecerHistorial((historialPrevio) => Array.isArray(historialPrevio) ? historialPrevio.filter((conv) => conv && conv.id !== idABorrar) : []);
