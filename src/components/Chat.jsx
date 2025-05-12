@@ -399,10 +399,12 @@ const Chat = ({
                 {/* ... Botón de adjuntar PDF ... */}
                 <div className="flex-shrink-0 self-end">
                      <input type="file" accept=".pdf" multiple onChange={manejarCambioArchivoInput} disabled={cargando} className="hidden" id="inputArchivoPdf" />
-                     <label htmlFor="inputArchivoPdf" title={conteoArchivosMostrados > 0 ? `${conteoArchivosMostrados} archivo(s)` : (idioma === 'es' ? 'Adjuntar PDF' : 'Attach PDF')}
-                           className={`relative cursor-pointer p-2.5 rounded-lg ${ cargando ? 'opacity-50' : 'hover:bg-hover-item' }`}>
+                     <label htmlFor="inputArchivoPdf" title={conteoArchivosMostrados > 0 ? `${conteoArchivosMostrados} ${idioma === 'es' ? 'archivo(s)' : 'file(s)'}` : (idioma === 'es' ? 'Seleccionar PDF' : 'Select PDF')}
+                           className={`relative cursor-pointer p-2.5 rounded-lg transition-all inline-block text-secondary ${ cargando ? 'bg-input opacity-50 cursor-not-allowed' : 'bg-button-secondary hover:bg-button-secondary-hover' }`}
+                           aria-disabled={cargando}
+                       >
                            📄
-                           {conteoArchivosMostrados > 0 && ( <span className="absolute flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-accent rounded-full shadow -top-1 -right-1"> {conteoArchivosMostrados} </span> )}
+                           {conteoArchivosMostrados > 0 && ( <span className="absolute flex items-center justify-center w-5 h-5 text-[10px] font-semibold text-white bg-green-600 rounded-full shadow -top-1 -right-1"> {conteoArchivosMostrados} </span> )}
                       </label>
                 </div>
                 <textarea ref={refAreaTexto} value={prompt} onChange={(e) => establecerPrompt(e.target.value)} placeholder={idioma === 'en' ? "Message or /imagen..." : "Mensaje o /imagen..."} disabled={cargando}
