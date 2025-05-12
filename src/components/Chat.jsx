@@ -49,16 +49,6 @@ const generarImagenDesdePrompt = async (prompt) => {
   }
 };
 
-const manejarGenerarImagen = async () => {
-  try {
-    const prompt = "A beautiful sunset over the mountains"; // Ejemplo de prompt
-    const imagen = await generarImagenDesdePrompt(prompt);
-    console.log("Imagen generada:", imagen);
-    // Aquí puedes manejar la imagen generada, como mostrarla en el chat
-  } catch (error) {
-    console.error("Error al generar la imagen:", error.message);
-  }
-};
 
 const Chat = ({
     conversacion,
@@ -166,162 +156,203 @@ const Chat = ({
     }, [indiceHistorialActivo, ttsDisponible]);
 
     const enviarMensajeYGenerarRespuesta = async (e) => {
-        if (e) e.preventDefault();
-        if (cargando) return;
-    
-        const promptActual = prompt.trim();
-        const archivosSeleccionadosActuales = listaArchivosUsuario.filter(f => f.seleccionado && !f.esNuevo).map(f => f.name);
-        const archivosNuevosActuales = archivosPdfNuevos;
-        const tieneArchivosSeleccionados = archivosSeleccionadosActuales.length > 0;
-        const tieneArchivosNuevos = archivosNuevosActuales.length > 0;
-    
-        if (
-            indiceHistorialActivo === null &&
-            !promptActual &&
-            archivosNuevosActuales.length === 0 &&
-            archivosSeleccionadosActuales.length === 0
-        ) {
+    if (e) e.preventDefault();
+    if (cargando) return;
+
+    const promptActual = prompt.trim();
+    const archivosSeleccionadosActuales = listaArchivosUsuario.filter(f => f.seleccionado && !f.esNuevo).map(f => f.name);
+    const archivosNuevosActuales = archivosPdfNuevos;
+    const tieneArchivosSeleccionados = archivosSeleccionadosActuales.length > 0;
+    const tieneArchivosNuevos = archivosNuevosActuales.length > 0;
+
+    if (
+        indiceHistorialActivo === null &&
+        !promptActual &&
+        archivosNuevosActuales.length === 0 &&
+        archivosSeleccionadosActuales.length === 0
+    ) {
+        establecerError(idioma === 'en'
+            ? 'Start or select a conversation first.'
+            : 'Inicia o selecciona una conversación primero.');
+        return;
+    }
+
+    if (ttsDisponible && window.speechSynthesis.speaking) {
+        console.log("[Send Msg] Cancelando habla.");
+        window.speechSynthesis.cancel();
+        setIdMensajeHablando(null);
+        refUtterance.current = null;
+    }
+
+    if (!promptActual && !tieneArchivosNuevos && !tieneArchivosSeleccionados) {
+        const errorMsg = idioma === 'en'
+            ? "Please write a message or select/upload at least one PDF file."
+            : "Por favor, escribe un mensaje o selecciona/sube al menos un archivo PDF.";
+        establecerError(errorMsg);
+        return;
+    }
+
+    // Detectar comando /imagen
+    if (promptActual.startsWith("/imagen ")) {
+        const promptImagen = promptActual.replace("/imagen ", "").trim();
+        if (!promptImagen) {
             establecerError(idioma === 'en'
-                ? 'Start or select a conversation first.'
-                : 'Inicia o selecciona una conversación primero.');
+                ? "Please provide a description for the image."
+                : "Por favor, proporciona una descripción para la imagen.");
             return;
         }
-    
-        if (ttsDisponible && window.speechSynthesis.speaking) {
-            console.log("[Send Msg] Cancelando habla.");
-            window.speechSynthesis.cancel();
-            setIdMensajeHablando(null);
-            refUtterance.current = null;
-        }
-    
-        if (!promptActual && !tieneArchivosNuevos && !tieneArchivosSeleccionados) {
-            const errorMsg = idioma === 'en'
-                ? "Please write a message or select/upload at least one PDF file."
-                : "Por favor, escribe un mensaje o selecciona/sube al menos un archivo PDF.";
-            establecerError(errorMsg);
-            return;
-        }
-    
-        establecerCargando(true);
-        establecerError("");
-    
-        const mensajeUsuario = {
-            role: "user",
-            text: promptActual,
-            date: new Date(),
-            esError: false
-        };
-    
-        const conversacionConUsuario = [...conversacion, mensajeUsuario];
-        establecerConversacion(conversacionConUsuario);
-        refConversacionAnterior.current = conversacionConUsuario;
-        establecerPrompt("");
-    
-        requestAnimationFrame(() => {
-            if (refAreaTexto.current) refAreaTexto.current.style.height = 'auto';
-            desplazarHaciaAbajo();
-        });
-    
+
         try {
-            const formData = new FormData();
-            formData.append("prompt", promptActual);
-            if (indiceHistorialActivo !== null) {
-                formData.append("conversationId", indiceHistorialActivo.toString());
-            }
-            formData.append("modeloSeleccionado", modeloSeleccionado);
-            formData.append("temperatura", temperatura.toString());
-            formData.append("topP", topP.toString());
-            formData.append("idioma", idioma);
-            formData.append("archivosSeleccionados", JSON.stringify(archivosSeleccionadosActuales));
-    
-            archivosNuevosActuales.forEach((archivoFileObject) => {
-                formData.append("archivosPdf", archivoFileObject, archivoFileObject.name);
-            });
-            
-    
-            const respuesta = await fetch("https://chat-backend-y914.onrender.com/api/generateText", {
-                method: "POST",
-                body: formData,
-                credentials: 'include'
-            });
-    
-            const datos = await respuesta.json();
-    
-            if (!respuesta.ok) {
-                let mensajeError = datos.error || `Error ${respuesta.status}: ${respuesta.statusText || 'Error desconocido'}`;
-                if (respuesta.status === 401 || respuesta.status === 403) {
-                    mensajeError = idioma === 'en'
-                        ? 'Authentication error. Please log in again.'
-                        : 'Error de autenticación. Por favor, inicia sesión de nuevo.';
-                } else if (respuesta.status === 413) {
-                    mensajeError = idioma === 'en'
-                        ? 'File too large.'
-                        : 'Archivo demasiado grande.';
-                } else if (respuesta.status === 400) {
-                    mensajeError = datos.error || (idioma === 'en' ? 'Invalid request.' : 'Petición inválida.');
-                } else if (datos.errors) {
-                    mensajeError = Object.values(datos.errors).flat().join(' ');
-                }
-                throw new Error(mensajeError);
-            }
-    
-            const esRespuestaError = datos.respuesta?.toLowerCase().includes("lo siento") ||
-                                     datos.respuesta?.toLowerCase().includes("i'm sorry") ||
-                                     datos.respuesta?.toLowerCase().includes("error") ||
-                                     !datos.respuesta;
-    
-            const mensajeBot = {
+            establecerCargando(true);
+            establecerError("");
+
+            console.log(`[Imagen] Generando imagen para el prompt: "${promptImagen}"`);
+            const imagen = await generarImagenDesdePrompt(promptImagen);
+
+            // Agregar la imagen generada a la conversación
+            const mensajeBotImagen = {
                 role: "model",
-                text: datos.respuesta || (idioma === 'en'
-                    ? "(Received empty response from assistant)"
-                    : "(Respuesta vacía recibida del asistente)"),
+                text: `![Imagen generada](data:image/png;base64,${imagen})`,
                 date: new Date(),
-                esError: esRespuestaError
+                esError: false,
             };
-    
-            const conversacionFinal = [...conversacionConUsuario, mensajeBot];
-            establecerConversacion(conversacionFinal);
-            refConversacionAnterior.current = conversacionFinal;
-    
-            if (datos.isNewConversation && datos.conversationId) {
-                establecerIndiceHistorialActivo(datos.conversationId);
-                if (typeof refrescarHistorial === 'function') {
-                    setTimeout(() => refrescarHistorial(), 100);
-                }
-            }
-    
-            if (tieneArchivosNuevos && typeof limpiarArchivosPdfNuevosYRefrescar === 'function') {
-                setTimeout(() => limpiarArchivosPdfNuevosYRefrescar(), 100);
-            }
-    
+
+            const conversacionConImagen = [...conversacion, mensajeBotImagen];
+            establecerConversacion(conversacionConImagen);
+            refConversacionAnterior.current = conversacionConImagen;
+
             desplazarHaciaAbajo();
-    
-        } catch (errorCapturado) {
-            console.error("Error en enviarMensajeYGenerarRespuesta:", errorCapturado);
-            const textoError = errorCapturado.message || (
-                idioma === 'en'
-                    ? "An unexpected error occurred."
-                    : "Ocurrió un error inesperado."
-            );
-            establecerError(textoError);
-    
-            const mensajeErrorParaChat = {
-                role: "model",
-                text: `${idioma === 'en' ? 'Error' : 'Error'}: ${textoError}`,
-                esError: true,
-                date: new Date()
-            };
-    
-            const conversacionConError = [...conversacionConUsuario, mensajeErrorParaChat];
-            establecerConversacion(conversacionConError);
-            refConversacionAnterior.current = conversacionConError;
-    
-            desplazarHaciaAbajo();
+        } catch (error) {
+            console.error("[Imagen] Error al generar la imagen:", error.message);
+            establecerError(idioma === 'en'
+                ? "Error generating the image."
+                : "Error al generar la imagen.");
         } finally {
             establecerCargando(false);
         }
+
+        return;
+    }
+
+    // Código existente para manejar mensajes normales
+    establecerCargando(true);
+    establecerError("");
+
+    const mensajeUsuario = {
+        role: "user",
+        text: promptActual,
+        date: new Date(),
+        esError: false
     };
-    
+
+    const conversacionConUsuario = [...conversacion, mensajeUsuario];
+    establecerConversacion(conversacionConUsuario);
+    refConversacionAnterior.current = conversacionConUsuario;
+    establecerPrompt("");
+
+    requestAnimationFrame(() => {
+        if (refAreaTexto.current) refAreaTexto.current.style.height = 'auto';
+        desplazarHaciaAbajo();
+    });
+
+    try {
+        const formData = new FormData();
+        formData.append("prompt", promptActual);
+        if (indiceHistorialActivo !== null) {
+            formData.append("conversationId", indiceHistorialActivo.toString());
+        }
+        formData.append("modeloSeleccionado", modeloSeleccionado);
+        formData.append("temperatura", temperatura.toString());
+        formData.append("topP", topP.toString());
+        formData.append("idioma", idioma);
+        formData.append("archivosSeleccionados", JSON.stringify(archivosSeleccionadosActuales));
+
+        archivosNuevosActuales.forEach((archivoFileObject) => {
+            formData.append("archivosPdf", archivoFileObject, archivoFileObject.name);
+        });
+
+        const respuesta = await fetch("https://chat-backend-y914.onrender.com/api/generateText", {
+            method: "POST",
+            body: formData,
+            credentials: 'include'
+        });
+
+        const datos = await respuesta.json();
+
+        if (!respuesta.ok) {
+            let mensajeError = datos.error || `Error ${respuesta.status}: ${respuesta.statusText || 'Error desconocido'}`;
+            if (respuesta.status === 401 || respuesta.status === 403) {
+                mensajeError = idioma === 'en'
+                    ? 'Authentication error. Please log in again.'
+                    : 'Error de autenticación. Por favor, inicia sesión de nuevo.';
+            } else if (respuesta.status === 413) {
+                mensajeError = idioma === 'en'
+                    ? 'File too large.'
+                    : 'Archivo demasiado grande.';
+            } else if (respuesta.status === 400) {
+                mensajeError = datos.error || (idioma === 'en' ? 'Invalid request.' : 'Petición inválida.');
+            } else if (datos.errors) {
+                mensajeError = Object.values(datos.errors).flat().join(' ');
+            }
+            throw new Error(mensajeError);
+        }
+
+        const esRespuestaError = datos.respuesta?.toLowerCase().includes("lo siento") ||
+                                 datos.respuesta?.toLowerCase().includes("i'm sorry") ||
+                                 datos.respuesta?.toLowerCase().includes("error") ||
+                                 !datos.respuesta;
+
+        const mensajeBot = {
+            role: "model",
+            text: datos.respuesta || (idioma === 'en'
+                ? "(Received empty response from assistant)"
+                : "(Respuesta vacía recibida del asistente)"),
+            date: new Date(),
+            esError: esRespuestaError
+        };
+
+        const conversacionFinal = [...conversacionConUsuario, mensajeBot];
+        establecerConversacion(conversacionFinal);
+        refConversacionAnterior.current = conversacionFinal;
+
+        if (datos.isNewConversation && datos.conversationId) {
+            establecerIndiceHistorialActivo(datos.conversationId);
+            if (typeof refrescarHistorial === 'function') {
+                setTimeout(() => refrescarHistorial(), 100);
+            }
+        }
+
+        if (tieneArchivosNuevos && typeof limpiarArchivosPdfNuevosYRefrescar === 'function') {
+            setTimeout(() => limpiarArchivosPdfNuevosYRefrescar(), 100);
+        }
+
+        desplazarHaciaAbajo();
+
+    } catch (errorCapturado) {
+        console.error("Error en enviarMensajeYGenerarRespuesta:", errorCapturado);
+        const textoError = errorCapturado.message || (
+            idioma === 'en'
+                ? "An unexpected error occurred."
+                : "Ocurrió un error inesperado."
+        );
+        establecerError(textoError);
+
+        const mensajeErrorParaChat = {
+            role: "model",
+            text: `${idioma === 'en' ? 'Error' : 'Error'}: ${textoError}`,
+            esError: true,
+            date: new Date()
+        };
+
+        const conversacionConError = [...conversacionConUsuario, mensajeErrorParaChat];
+        establecerConversacion(conversacionConError);
+        refConversacionAnterior.current = conversacionConError;
+
+        desplazarHaciaAbajo();
+    } finally {
+        establecerCargando(false);
+    }
+};
 
     const manejarCambioModelo = (evento) => { establecerModeloSeleccionado(evento.target.value); };
 
@@ -505,13 +536,6 @@ const Chat = ({
                      {cargando ? "⏳" : <span className="text-lg leading-none">➤</span>}
                   </button>
              </form>
-
-             {/* Botón para generar imagen */}
-             <div className="p-3 border-t border-divider bg-surface">
-                 <button onClick={manejarGenerarImagen} className="px-4 py-2 font-semibold rounded-lg bg-button-primary text-button-primary hover:bg-button-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface focus:ring-indigo-500">
-                     Generar Imagen
-                 </button>
-             </div>
         </div>
     );
 };
