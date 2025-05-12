@@ -42,7 +42,6 @@ const generarImagenDesdePrompt = async (prompt) => {
     }
 
     const { imagen } = await respuesta.json();
-    console.log("Imagen generada:", imagen);
     return imagen;
   } catch (error) {
     console.error("[Frontend] ❌ Error al generar imagen:", error.message);
