@@ -1,27 +1,23 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Chat from "./Chat";
-import Historial from "./Historial"; 
+import Historial from "./Historial";
 import Login from "./Login";
 
 const TEMP_POR_DEFECTO = 0.7;
 const TOPP_POR_DEFECTO = 0.9;
 const IDIOMA_POR_DEFECTO = 'es';
+const BACKEND_BASE_URL = "https://chat-backend-y914.onrender.com";
 
 const obtenerTemaInicial = () => {
     if (typeof window !== 'undefined') {
         const storedTheme = window.localStorage.getItem('theme');
-        if (storedTheme === 'dark' || storedTheme === 'light') {
-            return storedTheme;
-        }
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            return 'dark';
-        }
+        if (storedTheme === 'dark' || storedTheme === 'light') return storedTheme;
+        if (window.matchMedia('(prefers-color-scheme: dark)').matches) return 'dark';
     }
     return 'light';
 };
 
 export const App = () => {
-
     const [theme, setTheme] = useState(obtenerTemaInicial);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [currentUser, setCurrentUser] = useState(null);
@@ -31,8 +27,8 @@ export const App = () => {
     const [listaArchivosUsuario, setListaArchivosUsuario] = useState([]);
     const [archivosPdfNuevos, setArchivosPdfNuevos] = useState([]);
     const [idConversacionActiva, setIdConversacionActiva] = useState(null);
-    const [panelLateralAbierto, setPanelLateralAbierto] = useState(true); 
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); 
+    const [panelLateralAbierto, setPanelLateralAbierto] = useState(true);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [leerEnVozAltaActivado, setLeerEnVozAltaActivado] = useState(false);
 
     const [temperatura, setTemperatura] = useState(() => {
@@ -43,34 +39,22 @@ export const App = () => {
         const guardado = localStorage.getItem("ajustes_topP");
         return guardado !== null ? parseFloat(guardado) : TOPP_POR_DEFECTO;
     });
-    const [idioma, setIdioma] = useState(() => {
-        return localStorage.getItem("ajustes_idioma") || IDIOMA_POR_DEFECTO;
-    });
+    const [idioma, setIdioma] = useState(() => localStorage.getItem("ajustes_idioma") || IDIOMA_POR_DEFECTO);
 
     useEffect(() => {
-        const root = window.document.documentElement;
-        if (theme === 'dark') {
-            root.classList.add('dark-mode');
-            root.classList.remove('light');
-        } else {
-            root.classList.remove('dark-mode');
-            root.classList.add('light');
-        }
+        const root = document.documentElement;
+        root.classList.remove(theme === 'dark' ? 'light' : 'dark-mode');
+        root.classList.add(theme === 'dark' ? 'dark-mode' : 'light');
         localStorage.setItem('theme', theme);
     }, [theme]);
 
-    const cambiarTema = useCallback(() => {
-        setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
-    }, []);
-
-    const toggleMobileMenu = useCallback(() => {
-        setIsMobileMenuOpen(prev => !prev);
-    }, []);
+    const cambiarTema = useCallback(() => setTheme(prev => prev === 'light' ? 'dark' : 'light'), []);
+    const toggleMobileMenu = useCallback(() => setIsMobileMenuOpen(prev => !prev), []);
 
     const verificarAutenticacion = useCallback(async () => {
          setIsLoadingAuth(true);
          try {
-             const respuesta = await fetch("https://chat-backend-y914.onrender.com/api/verify-auth", {
+             const respuesta = await fetch(`${BACKEND_BASE_URL}/api/verify-auth`, {
                  method: 'GET', credentials: 'include', headers: { 'Accept': 'application/json' }
              });
              if (respuesta.ok) {
@@ -78,200 +62,102 @@ export const App = () => {
                  setIsAuthenticated(true); setCurrentUser(datos.user);
              } else {
                  setIsAuthenticated(false); setCurrentUser(null);
-                 setHistorialConversaciones([]);
-                 setListaArchivosUsuario([]);
-                 setMensajesConversacionActiva([]);
-                 setIdConversacionActiva(null);
+                 setHistorialConversaciones([]); setListaArchivosUsuario([]);
+                 setMensajesConversacionActiva([]); setIdConversacionActiva(null);
              }
          } catch (error) {
-             console.error("[Auth Verify Frontend] Error en fetch de verificación:", error);
+             console.error("[Auth Verify] Error fetch:", error);
              setIsAuthenticated(false); setCurrentUser(null);
-         } finally {
-             setIsLoadingAuth(false);
-         }
+         } finally { setIsLoadingAuth(false); }
      }, []);
 
-     useEffect(() => {
-         verificarAutenticacion();
-     }, [verificarAutenticacion]);
-
+     useEffect(() => { verificarAutenticacion(); }, [verificarAutenticacion]);
      useEffect(() => { localStorage.setItem("ajustes_temperatura", temperatura.toString()); }, [temperatura]);
      useEffect(() => { localStorage.setItem("ajustes_topP", topP.toString()); }, [topP]);
      useEffect(() => { localStorage.setItem("ajustes_idioma", idioma); }, [idioma]);
 
-    const cargarDatosUsuario = useCallback(async () => {
+    const cargarDatosUsuario = useCallback(async (forzarReverificacion = false) => {
         if (!isAuthenticated || !currentUser) {
-            setHistorialConversaciones([]); setListaArchivosUsuario([]);
-            setMensajesConversacionActiva([]); setIdConversacionActiva(null);
+            if(forzarReverificacion) await verificarAutenticacion(); // Solo si se fuerza y no está auth
+            else { // Si no está auth y no se fuerza, limpia estados
+                setHistorialConversaciones([]); setListaArchivosUsuario([]);
+                setMensajesConversacionActiva([]); setIdConversacionActiva(null);
+            }
             return;
-        };
-        console.log("[App] Cargando datos de usuario..."); 
-        let huboErrorCarga = false;
+        }
+        console.log("[App] Cargando datos de usuario...");
         try {
-            const [respuestaConv, respuestaArchivos] = await Promise.all([
-                 
-                 fetch("https://chat-backend-y914.onrender.com/api/conversations", { credentials: 'include' }),
-                 fetch("https://chat-backend-y914.onrender.com/api/files", { credentials: 'include' })
+            const [convRes, filesRes] = await Promise.all([
+                 fetch(`${BACKEND_BASE_URL}/api/conversations`, { credentials: 'include' }),
+                 fetch(`${BACKEND_BASE_URL}/api/files`, { credentials: 'include' })
             ]);
-
-            if (respuestaConv.ok) {
-                const datosConv = await respuestaConv.json();
-                console.log("[App] Conversaciones cargadas:", datosConv); 
-                setHistorialConversaciones(Array.isArray(datosConv) ? datosConv.map(c => ({ id: c.id, titulo: c.titulo })) : []);
-            } else {
-                console.error("[Data Load] Error conv:", respuestaConv.status, respuestaConv.statusText);
-                setHistorialConversaciones([]); huboErrorCarga = true;
-                 if (respuestaConv.status === 401 || respuestaConv.status === 403) {
-                     console.log("[Data Load] Auth error cargando conversaciones, reverificando...");
-                     await verificarAutenticacion(); 
-                 }
-            }
-
-            if (respuestaArchivos.ok) {
-                  const datosArchivos = await respuestaArchivos.json();
-                  console.log("[App] Archivos cargados:", datosArchivos); 
-                  setListaArchivosUsuario(Array.isArray(datosArchivos) ? datosArchivos.map(f => ({ name: f.name, displayName: f.originalName, url: '', seleccionado: false, esNuevo: false })) : []);
-            } else {
-                  console.error("[Data Load] Error files:", respuestaArchivos.status, respuestaArchivos.statusText);
-                  setListaArchivosUsuario([]); huboErrorCarga = true;
-                  if (respuestaArchivos.status === 401 || respuestaArchivos.status === 403) {
-                     console.log("[Data Load] Auth error cargando archivos, reverificando...");
-                     await verificarAutenticacion(); 
-                 }
-            }
+            if (convRes.ok) setHistorialConversaciones(await convRes.json().then(d => Array.isArray(d) ? d.map(c=>({id:c.id, titulo:c.titulo})) : []));
+            else { console.error("[Data Load] Error conv:", convRes.status, await convRes.text().catch(()=>"")); if(convRes.status === 401 || convRes.status === 403) await verificarAutenticacion(); }
+            if (filesRes.ok) setListaArchivosUsuario(await filesRes.json().then(d => Array.isArray(d) ? d.map(f=>({name:f.name, displayName:f.originalName, seleccionado:false, esNuevo:false})) : []));
+            else { console.error("[Data Load] Error files:", filesRes.status, await filesRes.text().catch(()=>"")); if(filesRes.status === 401 || filesRes.status === 403) await verificarAutenticacion(); }
         } catch (error) {
             console.error("[Data Load] Error fetch carga datos:", error);
             setHistorialConversaciones([]); setListaArchivosUsuario([]);
-            huboErrorCarga = true;
+            // Mantener mensajes y ID de conversación activa si la carga falla, para no interrumpir al usuario.
         }
-
-       
-        if (huboErrorCarga) {
-            setMensajesConversacionActiva([]); setIdConversacionActiva(null);
-        }
-    }, [isAuthenticated, currentUser, verificarAutenticacion]); 
+    }, [isAuthenticated, currentUser, verificarAutenticacion]);
 
     useEffect(() => {
-        if (isAuthenticated) {
-             console.log("[App Effect] Usuario autenticado, llamando a cargarDatosUsuario");
-             cargarDatosUsuario();
-        } else {
-             console.log("[App Effect] Usuario NO autenticado, limpiando datos");
-          
-            setHistorialConversaciones([]);
-            setMensajesConversacionActiva([]);
-            setListaArchivosUsuario([]);
-            setArchivosPdfNuevos([]);
-            setIdConversacionActiva(null);
-            setCurrentUser(null); 
-        }
-        
+        if (isAuthenticated) cargarDatosUsuario();
+        else { /* Estados ya se limpian en verificarAutenticacion si falla o al hacer logout */ }
     }, [isAuthenticated, cargarDatosUsuario]);
 
     const manejarLogout = useCallback(async () => {
-        try {
-           
-            await fetch("https://chat-backend-y914.onrender.com/api/logout", { method: 'POST', credentials: 'include' });
-        } catch (error) {
-            console.error("[Logout] Error fetch:", error);
-        } finally {
-          
-            setIsAuthenticated(false);
-            setCurrentUser(null);
-            setHistorialConversaciones([]);
-            setMensajesConversacionActiva([]);
-            setListaArchivosUsuario([]);
-            setArchivosPdfNuevos([]);
-            setIdConversacionActiva(null);
-            setIsMobileMenuOpen(false);
-            console.log("[Logout] User logged out, state cleared.");
-        }
-    }, []); 
-
-    const seleccionarArchivo = useCallback((nombreArchivoUnico) => {
-        setListaArchivosUsuario(listaAnterior =>
-            listaAnterior.map(archivo =>
-                archivo.name === nombreArchivoUnico ? { ...archivo, seleccionado: !archivo.seleccionado } : archivo
-            )
-        );
+        try { await fetch(`${BACKEND_BASE_URL}/api/logout`, { method: 'POST', credentials: 'include' }); }
+        catch (error) { console.error("[Logout] Error fetch:", error); }
+        finally { setIsAuthenticated(false); setIsMobileMenuOpen(false); } // Esto dispara el useEffect para limpiar el resto
     }, []);
 
-    const manejarCambioInputArchivo = useCallback((evento) => {
-        const nuevosArchivosArray = Array.from(evento.target.files || []);
-        if (nuevosArchivosArray.length > 0) {
-             const archivosPdfValidos = nuevosArchivosArray.filter(file => file.type === 'application/pdf');
-              if (archivosPdfValidos.length !== nuevosArchivosArray.length) {
-                   alert(idioma === 'en' ? "Only PDF files are allowed." : "Solo se permiten archivos PDF.");
-              }
-            setArchivosPdfNuevos(archivosPdfValidos);
-        } else {
-             setArchivosPdfNuevos([]);
-        }
-        if (evento.target) evento.target.value = null;
+    const seleccionarArchivo = useCallback((nombre) => {
+        setListaArchivosUsuario(prev => prev.map(a => a.name === nombre ? { ...a, seleccionado: !a.seleccionado } : a));
+    }, []);
+
+    const manejarCambioInputArchivo = useCallback((e) => {
+        const files = Array.from(e.target.files || []);
+        if (files.length > 0) {
+            const pdfs = files.filter(f => f.type === 'application/pdf');
+            if (pdfs.length !== files.length) alert(idioma === 'en' ? "Only PDF files allowed." : "Solo PDF.");
+            setArchivosPdfNuevos(pdfs);
+        } else setArchivosPdfNuevos([]);
+        if (e.target) e.target.value = null;
     }, [idioma]);
 
     const refrescarArchivos = useCallback(async (preservarSelecciones = true) => {
         if (!isAuthenticated) return;
-         let seleccionadosPrev = new Map();
-         if(preservarSelecciones && Array.isArray(listaArchivosUsuario)) {
-             seleccionadosPrev = new Map(listaArchivosUsuario.filter(f => f && f.seleccionado && !f.esNuevo).map(f => [f.name, true]));
-         }
+        const seleccionados = preservarSelecciones ? new Map(listaArchivosUsuario.filter(f=>f.seleccionado && !f.esNuevo).map(f=>[f.name,true])) : new Map();
         try {
-           
-            const respuesta = await fetch("https://chat-backend-y914.onrender.com/api/files", { credentials: 'include' });
-            if (respuesta.ok) {
-                const datos = await respuesta.json();
-                setListaArchivosUsuario(Array.isArray(datos) ? datos.map(archivoServidor => ({ name: archivoServidor.name, displayName: archivoServidor.originalName, url: '', seleccionado: preservarSelecciones ? !!seleccionadosPrev.get(archivoServidor.name) : false, esNuevo: false })) : []);
-            } else {
-                 if (respuesta.status === 401 || respuesta.status === 403) {
-                     console.log("[Refresh Files] Auth error, reverificando...");
-                     await verificarAutenticacion();
-                 }
-                 else { console.error("[Refresh Files] Error:", respuesta.status, respuesta.statusText); }
-            }
-        } catch (error) { console.error("[Refresh Files] Error fetch:", error); }
-    }, [isAuthenticated, listaArchivosUsuario, verificarAutenticacion]); 
+            const res = await fetch(`${BACKEND_BASE_URL}/api/files`, { credentials: 'include' });
+            if (res.ok) {
+                const datos = await res.json();
+                setListaArchivosUsuario(Array.isArray(datos) ? datos.map(f=>({name:f.name, displayName:f.originalName, seleccionado: !!seleccionados.get(f.name), esNuevo:false})) : []);
+            } else { if (res.status === 401 || res.status === 403) await verificarAutenticacion(); else console.error("[Refresh Files] Error:", res.status); }
+        } catch (err) { console.error("[Refresh Files] Error fetch:", err); }
+    }, [isAuthenticated, listaArchivosUsuario, verificarAutenticacion]);
 
-     const limpiarNuevosPdfsYRefrescar = useCallback(async () => {
+    const limpiarNuevosPdfsYRefrescar = useCallback(async () => {
          setArchivosPdfNuevos([]);
          await refrescarArchivos(true);
      }, [refrescarArchivos]);
+
      useEffect(() => {
-        const handleKeyDown = (event) => {
-            // Primero: verificamos que event y event.key existan
-            if (!event?.key) return;
-    
-            // Si presionan ESC y el menú móvil está abierto, lo cerramos
-            if (event.key === 'Escape' && isMobileMenuOpen) {
-                toggleMobileMenu();
-                return;
-            }
-    
-            // Si presionan la tecla "f" (fuera de inputs), activar lectura en voz alta
-            if (event.key.toLowerCase() === 'f') {
-                const activeElement = document.activeElement;
-                const isInputFocused = activeElement && 
-                    (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA');
-                
-                if (!isInputFocused) {
-                    event.preventDefault(); // evitar efectos raros
-                    setLeerEnVozAltaActivado(prev => !prev);
-                }
+        const handleKeyDown = (e) => {
+            if (!e?.key) return;
+            if (e.key === 'Escape' && isMobileMenuOpen) { toggleMobileMenu(); return; }
+            if (e.key.toLowerCase() === 'f' && !(document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement)) {
+                e.preventDefault(); setLeerEnVozAltaActivado(prev => !prev);
             }
         };
-    
         window.addEventListener('keydown', handleKeyDown);
-        return () => {
-            window.removeEventListener('keydown', handleKeyDown);
-        };
-    }, [isMobileMenuOpen, toggleMobileMenu, setLeerEnVozAltaActivado]);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isMobileMenuOpen, toggleMobileMenu]); // leerEnVozAltaActivado no necesita estar aquí
 
     useEffect(() => {
-        const handleResize = () => {
-            if (window.innerWidth >= 768) { 
-                setIsMobileMenuOpen(false);
-            }
-        };
+        const handleResize = () => { if (window.innerWidth >= 768) setIsMobileMenuOpen(false); };
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
@@ -281,63 +167,40 @@ export const App = () => {
     }
 
     if (!isAuthenticated) {
-        return <Login onLoginSuccess={verificarAutenticacion} />;
+        return <Login onLoginSuccess={verificarAutenticacion} backendUrl={BACKEND_BASE_URL} />;
     }
 
     return (
         <div className="relative flex flex-col md:flex-row h-screen bg-base text-primary md:divide-x border-divider overflow-hidden">
-          
-            {isMobileMenuOpen && (
-                <div
-                    className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden"
-                    onClick={toggleMobileMenu}
-                    aria-hidden="true"
-                ></div>
-            )}
-
+            {isMobileMenuOpen && ( <div className="fixed inset-0 z-30 bg-black/40 backdrop-blur-sm md:hidden" onClick={toggleMobileMenu} aria-hidden="true" ></div> )}
             <Historial
-                theme={theme}
-                cambiarTema={cambiarTema}
-                historial={historialConversaciones}
-                establecerHistorial={setHistorialConversaciones}
+                theme={theme} cambiarTema={cambiarTema}
+                historial={historialConversaciones} establecerHistorial={setHistorialConversaciones}
                 establecerConversacion={setMensajesConversacionActiva}
-                indiceHistorialActivo={idConversacionActiva}
-                establecerIndiceHistorialActivo={setIdConversacionActiva}
-                listaArchivosUsuario={listaArchivosUsuario}
-                setListaArchivosUsuario={setListaArchivosUsuario} 
-                manejarSeleccionArchivo={seleccionarArchivo}
-                refrescarListaArchivos={refrescarArchivos}
-                estaPanelLateralAbierto={panelLateralAbierto}
-                establecerEstaPanelLateralAbierto={setPanelLateralAbierto}
-                isMobileMenuOpen={isMobileMenuOpen}
-                toggleMobileMenu={toggleMobileMenu}
-                temperatura={temperatura}
-                establecerTemperatura={setTemperatura}
-                topP={topP}
-                establecerTopP={setTopP}
-                idioma={idioma}
-                establecerIdioma={setIdioma}
-                manejarLogout={manejarLogout}
-                currentUser={currentUser}
+                idConversacionActiva={idConversacionActiva} establecerIdConversacionActiva={setIdConversacionActiva}
+                listaArchivosUsuario={listaArchivosUsuario} setListaArchivosUsuario={setListaArchivosUsuario}
+                manejarSeleccionArchivo={seleccionarArchivo} refrescarListaArchivos={refrescarArchivos}
+                estaPanelLateralAbierto={panelLateralAbierto} establecerEstaPanelLateralAbierto={setPanelLateralAbierto}
+                isMobileMenuOpen={isMobileMenuOpen} toggleMobileMenu={toggleMobileMenu}
+                temperatura={temperatura} establecerTemperatura={setTemperatura}
+                topP={topP} establecerTopP={setTopP}
+                idioma={idioma} establecerIdioma={setIdioma}
+                manejarLogout={manejarLogout} currentUser={currentUser}
+                backendUrl={BACKEND_BASE_URL}
             />
             <Chat
-                conversacion={mensajesConversacionActiva}
-                establecerConversacion={setMensajesConversacionActiva}
-                listaArchivosUsuario={listaArchivosUsuario}
-                archivosPdfNuevos={archivosPdfNuevos}
+                conversacion={mensajesConversacionActiva} establecerConversacion={setMensajesConversacionActiva}
+                listaArchivosUsuario={listaArchivosUsuario} archivosPdfNuevos={archivosPdfNuevos}
                 manejarCambioArchivoInput={manejarCambioInputArchivo}
                 limpiarArchivosPdfNuevosYRefrescar={limpiarNuevosPdfsYRefrescar}
-                indiceHistorialActivo={idConversacionActiva}
-                establecerIndiceHistorialActivo={setIdConversacionActiva}
-                temperatura={temperatura}
-                topP={topP}
-                idioma={idioma}
-                refrescarHistorial={cargarDatosUsuario} 
+                idConversacionActiva={idConversacionActiva} establecerIdConversacionActiva={setIdConversacionActiva}
+                temperatura={temperatura} topP={topP} idioma={idioma}
+                refrescarHistorial={cargarDatosUsuario} // Esta es la función para que Chat pueda pedir un refresh del historial de conversaciones
                 leerEnVozAltaActivado={leerEnVozAltaActivado}
                 toggleMobileMenu={toggleMobileMenu}
+                backendUrl={BACKEND_BASE_URL}
             />
         </div>
     );
 };
-
 export default App;

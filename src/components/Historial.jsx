@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import classNames from 'classnames'; 
+import classNames from 'classnames';
 
 
 const IconoPapelera = ({ className = "" }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /> </svg> );
@@ -27,8 +27,8 @@ const Historial = ({
     listaArchivosUsuario,
     setListaArchivosUsuario,
     manejarSeleccionArchivo,
-    indiceHistorialActivo,
-    establecerIndiceHistorialActivo,
+    idConversacionActiva, // Recibe el ID de la conversación activa
+    establecerIdConversacionActiva, // Recibe la función para establecer el ID de la conversación activa
     estaPanelLateralAbierto,
     establecerEstaPanelLateralAbierto,
     isMobileMenuOpen,
@@ -43,12 +43,13 @@ const Historial = ({
     manejarLogout,
     currentUser,
     theme,
-    cambiarTema
+    cambiarTema,
+    backendUrl // Recibido de App.jsx
   }) => {
-  
+
     const [mostrarAjustes, establecerMostrarAjustes] = useState(false);
     const [estaArchivosAbierto, establecerEstaArchivosAbierto] = useState(true);
-    const [indiceEditandoTitulo, establecerIndiceEditandoTitulo] = useState(null);
+    const [indiceEditandoTitulo, establecerIndiceEditandoTitulo] = useState(null); // Mantiene el ID de la conversación que se está editando
     const [tituloEditado, establecerTituloEditado] = useState('');
     const refInputEdicion = useRef(null);
     const [terminoBusqueda, establecerTerminoBusqueda] = useState('');
@@ -56,92 +57,108 @@ const Historial = ({
     const refInputBusqueda = useRef(null);
     const [isLoadingMessages, setIsLoadingMessages] = useState(false);
     const [errorCargaMensajes, setErrorCargaMensajes] = useState('');
-  
+
     const isClient = typeof window !== 'undefined';
-  
+
     useEffect(() => {
       if (indiceEditandoTitulo !== null && refInputEdicion.current) {
         refInputEdicion.current.focus();
         refInputEdicion.current.select();
       }
     }, [indiceEditandoTitulo]);
-  
+
     useEffect(() => {
       if (mostrarBarraBusqueda && refInputBusqueda.current) {
         refInputBusqueda.current.focus();
       }
     }, [mostrarBarraBusqueda]);
-  
+
     const historialFiltrado = terminoBusqueda && Array.isArray(historial)
       ? historial.filter(item => item && item.titulo && item.titulo.toLowerCase().includes(terminoBusqueda.toLowerCase()))
       : historial;
-  
-    // Corrección aquí
-    const manejarClicHistorial = async (id) => {
+
+    const manejarClicHistorial = async (conversationId) => { // El parámetro es el ID de la conversación
+      if (typeof establecerIdConversacionActiva !== 'function') {
+        console.error("Historial.jsx: establecerIdConversacionActiva no es una función!");
+        setErrorCargaMensajes(idioma === 'en' ? 'Internal error.' : 'Error interno.');
+        return;
+      }
+       if (typeof establecerConversacion !== 'function') {
+        console.error("Historial.jsx: establecerConversacion no es una función!");
+        setErrorCargaMensajes(idioma === 'en' ? 'Internal error.' : 'Error interno.');
+        return;
+      }
+
       try {
-        console.log("[Historial] Iniciando carga para Conv ID:", id);
+        console.log("[Historial] Iniciando carga para Conv ID:", conversationId);
         setIsLoadingMessages(true);
         setErrorCargaMensajes('');
-  
-        const respuesta = await fetch(`https://chat-backend-y914.onrender.com/api/conversations/${id}/messages`, {
+
+        const respuesta = await fetch(`${backendUrl}/api/conversations/${conversationId}/messages`, {
           credentials: 'include',
         });
-        console.log("[Historial] Fetch https://chat-backend-y914.onrender.com/api/conversations/" + id + "/messages - Status:", respuesta.status);
-  
+        console.log(`[Historial] Fetch ${backendUrl}/api/conversations/${conversationId}/messages - Status:`, respuesta.status);
+
+        if (!respuesta.ok) {
+            const errorData = await respuesta.json().catch(() => ({ error: `Error ${respuesta.status}`}));
+            console.error("[Historial] Error API cargando mensajes:", errorData.error);
+            setErrorCargaMensajes(idioma === 'en' ? `Error: ${errorData.error}` : `Error: ${errorData.error}`);
+            setIsLoadingMessages(false);
+            return;
+        }
+
         const data = await respuesta.json();
         console.log("[Historial] Datos recibidos de la API:", data);
-  
+
         if (!Array.isArray(data)) {
-          console.error("[Historial] Datos no válidos:", data);
-          setErrorCargaMensajes(idioma === 'en' ? 'Error loading messages.' : 'Error cargando mensajes.');
+          console.error("[Historial] Datos no válidos (no es array):", data);
+          setErrorCargaMensajes(idioma === 'en' ? 'Error loading messages (invalid format).' : 'Error cargando mensajes (formato inválido).');
+          setIsLoadingMessages(false);
           return;
         }
-  
+
         const mensajesFormateados = data.map((mensaje) => ({
-            role: mensaje.rol === 'user' ? 'user' : 'model',    // Conversión correcta
-            text: mensaje.texto || '',                          //  ATENCIÓN: coger "texto", no "contenido"
-            date: mensaje.fecha_envio || '',                    // Fecha
-            esError: false,                                   
+            role: mensaje.rol === 'user' ? 'user' : 'model',
+            text: mensaje.texto || '',
+            imageUrl: mensaje.imageUrl || null, // Incluir campos de imagen
+            fileName: mensaje.fileName || null,
+            isImage: !!mensaje.isImage,
+            date: mensaje.fecha_envio || new Date().toISOString(),
+            esError: mensaje.esError !== undefined ? mensaje.esError : (mensaje.role === 'model' && !mensaje.texto && !mensaje.imageUrl), // Mejorar detección de error
           }));
-  
+
         console.log("[Historial] Mensajes formateados:", mensajesFormateados);
-  
-        if (mensajesFormateados.length === 0) {
-          console.warn("[Historial] Conversación", id, "cargada, pero no tiene mensajes.");
-        }
-  
-        //  Aquí corregimos bien: actualizar conversación
+
         establecerConversacion(mensajesFormateados);
-        establecerIndiceHistorialActivo(id);
-  
+        establecerIdConversacionActiva(conversationId); // <--- CORRECCIÓN APLICADA AQUÍ
+
       } catch (error) {
-        console.error("[Historial] Error cargando mensajes para Conv ID", id, ":", error);
-        setErrorCargaMensajes(idioma === 'en' ? 'Error loading messages.' : 'Error cargando mensajes.');
+        console.error("[Historial] Catch Error cargando mensajes para Conv ID", conversationId, ":", error);
+        setErrorCargaMensajes(idioma === 'en' ? `Error loading messages: ${error.message}` : `Error cargando mensajes: ${error.message}`);
       } finally {
         setIsLoadingMessages(false);
-        console.log("[Historial] Carga finalizada para Conv ID:", id);
+        console.log("[Historial] Carga finalizada para Conv ID:", conversationId);
       }
     };
-  
+
     const manejarClicHistorialWrapper = async (conversationId) => {
-      if (isClient && window.innerWidth < 768) {
+      if (isClient && window.innerWidth < 768 && typeof toggleMobileMenu === 'function') {
         toggleMobileMenu();
       }
       await manejarClicHistorial(conversationId);
     };
 
     const manejarBorrarHistorial = async (idABorrar) => {
+        if (indiceEditandoTitulo === idABorrar) establecerIndiceEditandoTitulo(null);
         const confirmMsg = idioma === 'en' ? "Are you sure you want to delete this conversation?" : "¿Estás seguro de que quieres borrar esta conversación del historial?";
         if (window.confirm(confirmMsg)) {
-             if (indiceEditandoTitulo === idABorrar) { manejarCancelarEdicion(); }
             try {
-                
-                const response = await fetch(`https://chat-backend-y914.onrender.com/api/conversations/${idABorrar}`, { method: 'DELETE', credentials: 'include' });
+                const response = await fetch(`${backendUrl}/api/conversations/${idABorrar}`, { method: 'DELETE', credentials: 'include' });
                 if (response.ok) {
                     establecerHistorial((historialPrevio) => Array.isArray(historialPrevio) ? historialPrevio.filter((conv) => conv && conv.id !== idABorrar) : []);
-                    if (idABorrar === indiceHistorialActivo) {
+                    if (idABorrar === idConversacionActiva) { // Usar prop correcta
                         establecerConversacion([]);
-                        establecerIndiceHistorialActivo(null);
+                        establecerIdConversacionActiva(null); // Usar prop correcta
                     }
                 } else {
                     const errorData = await response.json().catch(() => ({ error: `Error ${response.status}` }));
@@ -163,12 +180,12 @@ const Historial = ({
             setListaArchivosUsuario(prev => Array.isArray(prev) ? prev.map(f => f.esNuevo ? f : {...f, seleccionado: false}) : []);
         }
         establecerConversacion([]);
-        establecerIndiceHistorialActivo(null);
+        if (typeof establecerIdConversacionActiva === 'function') establecerIdConversacionActiva(null); // Usar prop correcta
         setErrorCargaMensajes('');
     };
 
     const manejarNuevaPaginaWrapper = () => {
-         if (isClient && window.innerWidth < 768) {
+         if (isClient && window.innerWidth < 768 && typeof toggleMobileMenu === 'function') {
             toggleMobileMenu();
          }
          manejarNuevaPagina();
@@ -191,17 +208,16 @@ const Historial = ({
         const tituloOriginal = originalItem?.titulo;
 
         if (!nuevoTitulo || nuevoTitulo === tituloOriginal) {
-            manejarCancelarEdicion();
+            establecerIndiceEditandoTitulo(null); establecerTituloEditado('');
             return;
         }
-        const originalHistory = [...historial];
+        const originalHistory = historial.map(item => ({...item})); // Copia profunda simple
         establecerHistorial(historialPrevio => historialPrevio.map(item => item && item.id === idAGuardar ? { ...item, titulo: nuevoTitulo } : item ));
         establecerIndiceEditandoTitulo(null);
         establecerTituloEditado('');
 
         try {
-            
-            const response = await fetch(`https://chat-backend-y914.onrender.com/api/conversations/${idAGuardar}/title`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nuevoTitulo }), credentials: 'include' });
+            const response = await fetch(`${backendUrl}/api/conversations/${idAGuardar}/title`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nuevoTitulo }), credentials: 'include' });
             if (!response.ok) {
                  establecerHistorial(originalHistory);
                  const errorData = await response.json().catch(() => ({ error: `Error ${response.status}` }));
@@ -244,10 +260,9 @@ const Historial = ({
         const confirmMsg = idioma === 'en' ? `Are you sure you want to delete the file "${nombreOriginalUsuario}"? This cannot be undone.` : `¿Estás seguro de que quieres borrar el archivo "${nombreOriginalUsuario}"? Esta acción no se puede deshacer.`;
         if (window.confirm(confirmMsg)) {
             try {
-                
-                const response = await fetch(`https://chat-backend-y914.onrender.com/api/files/${nombreArchivoUnico}`, { method: 'DELETE', credentials: 'include' });
+                const response = await fetch(`${backendUrl}/api/files/${nombreArchivoUnico}`, { method: 'DELETE', credentials: 'include' });
                 if (response.ok) {
-                     await refrescarListaArchivos(false);
+                     if (typeof refrescarListaArchivos === 'function') await refrescarListaArchivos(false);
                 } else {
                     const errorData = await response.json().catch(() => ({ error: `Error ${response.status}` }));
                     alert((idioma === 'en' ? `Failed to delete file: ` : `Error al borrar archivo: `) + (errorData.error || 'Unknown error'));
@@ -269,16 +284,13 @@ const Historial = ({
         { 'md:w-64 lg:w-72 md:p-4': estaPanelLateralAbierto, 'md:w-16 md:p-2 md:pt-4': !estaPanelLateralAbierto }
     );
 
-    const isMobileSize = () => isClient && window.innerWidth < 768;
+    const isMobile = isClient && window.innerWidth < 768;
 
     return (
         <aside id="historial-sidebar" className={sidebarClasses}>
-            <button
-                onClick={toggleMobileMenu}
-                className="absolute top-3 right-3 p-1 rounded-md text-secondary hover:text-primary hover:bg-hover-item md:hidden"
-                title={idioma === 'en' ? 'Close menu' : 'Cerrar menú'} >
-                <IconoCerrar />
-            </button>
+            {(isMobile && typeof toggleMobileMenu === 'function') && (
+                 <button onClick={toggleMobileMenu} className="absolute top-3 right-3 p-1 rounded-md text-secondary hover:text-primary hover:bg-hover-item md:hidden" title={idioma === 'en' ? 'Close menu' : 'Cerrar menú'} > <IconoCerrar /> </button>
+            )}
 
             <div className={classNames( 'hidden md:flex items-center mb-4 relative', { 'justify-between space-x-2': estaPanelLateralAbierto, 'w-full justify-center': !estaPanelLateralAbierto } )}>
                  {estaPanelLateralAbierto && (
@@ -327,13 +339,13 @@ const Historial = ({
                  <div className={classNames('flex-shrink-0', { 'mb-4 w-full px-1': estaPanelLateralAbierto, 'w-auto mb-4 md:w-full': !estaPanelLateralAbierto })}>
                      <button onClick={manejarNuevaPaginaWrapper} className={classNames( 'p-2.5 font-medium rounded-lg transition-colors text-sm flex items-center shadow-sm cursor-pointer bg-button-primary text-button-primary', { 'w-full justify-center': estaPanelLateralAbierto, 'justify-center': !estaPanelLateralAbierto } )} title={idioma === 'en' ? "New chat" : "Nueva conversación"}>
                          <IconoMas className={classNames({'md:mr-0': !estaPanelLateralAbierto})} />
-                         {(estaPanelLateralAbierto || isMobileSize()) && <span className="ml-1">{idioma === 'en' ? 'New Conversation' : 'Nueva Conversación'}</span>}
+                         {(estaPanelLateralAbierto || isMobile) && <span className="ml-1">{idioma === 'en' ? 'New Conversation' : 'Nueva Conversación'}</span>}
                      </button>
                  </div>
 
-                {(estaPanelLateralAbierto || isMobileSize()) && <hr className="mb-4 flex-shrink-0 border-divider" />}
+                {(estaPanelLateralAbierto || isMobile) && <hr className="mb-4 flex-shrink-0 border-divider" />}
 
-                <div className={classNames('flex flex-col flex-grow min-h-0 mb-6', { 'md:hidden': !estaPanelLateralAbierto })}>
+                <div className={classNames('flex flex-col flex-grow min-h-0 mb-6', { 'md:hidden': !estaPanelLateralAbierto && !isMobile })}>
                     <h2 className="text-xs font-semibold uppercase tracking-wider mb-2 px-1 flex-shrink-0 text-muted">{idioma === 'en' ? 'History' : 'Historial'}</h2>
                     {errorCargaMensajes && ( <p className="px-2 py-1 mb-2 text-xs rounded border bg-error-notification text-error border-error-notification"> {errorCargaMensajes} </p> )}
                     {Array.isArray(historialFiltrado) && historialFiltrado.length > 0 ? (
@@ -341,7 +353,7 @@ const Historial = ({
                             <ul className="space-y-1">
                                 {historialFiltrado.map((item) => {
                                     if (!item || typeof item.id === 'undefined') return null;
-                                    const isSelected = item.id === indiceHistorialActivo;
+                                    const isSelected = item.id === idConversacionActiva; // Usar prop correcta
                                     const isEditing = indiceEditandoTitulo === item.id;
                                     return (
                                         <li key={item.id}>
@@ -364,11 +376,11 @@ const Historial = ({
                     ) : ( <p className="px-1 text-sm flex-shrink-0 text-muted"> {terminoBusqueda ? (idioma === 'en' ? 'No matches found.' : 'No hay coincidencias.') : (idioma === 'en' ? 'No conversations yet.' : 'No hay conversaciones.')} </p> )}
                 </div>
 
-                <div className={classNames('flex-shrink-0 pt-4 mt-auto border-t border-divider', { 'md:hidden': !estaPanelLateralAbierto })}>
+                <div className={classNames('flex-shrink-0 pt-4 mt-auto border-t border-divider', { 'md:hidden': !estaPanelLateralAbierto && !isMobile })}>
                      <div className="flex items-center justify-between px-1 mb-2 transition-colors rounded cursor-pointer hover:bg-hover-item" onClick={() => establecerEstaArchivosAbierto(!estaArchivosAbierto)} title={estaArchivosAbierto ? (idioma === 'en' ? "Hide" : "Ocultar") : (idioma === 'en' ? "Show" : "Mostrar")}>
                          <h3 className="text-xs font-semibold tracking-wider uppercase text-muted">{idioma === 'en' ? 'Available Files' : 'Archivos Disponibles'}</h3>
                          <div className="flex items-center space-x-1">
-                              <button onClick={(e) => { e.stopPropagation(); refrescarListaArchivos(false); }} className="p-1 transition-colors rounded-md text-muted hover:text-primary hover:bg-hover-item cursor-pointer" title={idioma === 'en' ? "Refresh" : "Refrescar"}> <IconoRefrescar /> </button>
+                              <button onClick={(e) => { e.stopPropagation(); if(typeof refrescarListaArchivos === 'function') refrescarListaArchivos(false); }} className="p-1 transition-colors rounded-md text-muted hover:text-primary hover:bg-hover-item cursor-pointer" title={idioma === 'en' ? "Refresh" : "Refrescar"}> <IconoRefrescar /> </button>
                               <span className="p-1 text-muted">{estaArchivosAbierto ? <IconoChevronArriba /> : <IconoChevronAbajo />}</span>
                          </div>
                      </div>
@@ -394,7 +406,7 @@ const Historial = ({
                   </div>
 
                  <div className={classNames( 'mt-auto pt-4 border-t border-divider', { 'px-1 pb-2': estaPanelLateralAbierto, 'flex flex-col items-center space-y-4 pb-4': !estaPanelLateralAbierto } )}>
-                     {(estaPanelLateralAbierto || isMobileSize()) && currentUser && (
+                     {(estaPanelLateralAbierto || isMobile) && currentUser && (
                         <div className="px-1 mb-2 text-xs truncate text-muted" title={currentUser.username || ''}>
                             {idioma === 'en' ? 'Logged in as: ' : 'Usuario: '}
                             <span className="font-medium text-secondary">{currentUser.username}</span>
