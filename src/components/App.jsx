@@ -1,3 +1,5 @@
+// --- START OF FILE App.jsx ---
+
 import React, { useState, useEffect, useCallback } from "react";
 import Chat from "./Chat";
 import Historial from "./Historial";
@@ -78,8 +80,8 @@ export const App = () => {
 
     const cargarDatosUsuario = useCallback(async (forzarReverificacion = false) => {
         if (!isAuthenticated || !currentUser) {
-            if(forzarReverificacion) await verificarAutenticacion(); // Solo si se fuerza y no está auth
-            else { // Si no está auth y no se fuerza, limpia estados
+            if(forzarReverificacion) await verificarAutenticacion();
+            else {
                 setHistorialConversaciones([]); setListaArchivosUsuario([]);
                 setMensajesConversacionActiva([]); setIdConversacionActiva(null);
             }
@@ -97,21 +99,78 @@ export const App = () => {
             else { console.error("[Data Load] Error files:", filesRes.status, await filesRes.text().catch(()=>"")); if(filesRes.status === 401 || filesRes.status === 403) await verificarAutenticacion(); }
         } catch (error) {
             console.error("[Data Load] Error fetch carga datos:", error);
-            setHistorialConversaciones([]); setListaArchivosUsuario([]);
-            // Mantener mensajes y ID de conversación activa si la carga falla, para no interrumpir al usuario.
+            // No limpiar conversación activa si falla una recarga de fondo
         }
     }, [isAuthenticated, currentUser, verificarAutenticacion]);
 
     useEffect(() => {
         if (isAuthenticated) cargarDatosUsuario();
-        else { /* Estados ya se limpian en verificarAutenticacion si falla o al hacer logout */ }
     }, [isAuthenticated, cargarDatosUsuario]);
 
     const manejarLogout = useCallback(async () => {
         try { await fetch(`${BACKEND_BASE_URL}/api/logout`, { method: 'POST', credentials: 'include' }); }
         catch (error) { console.error("[Logout] Error fetch:", error); }
-        finally { setIsAuthenticated(false); setIsMobileMenuOpen(false); } // Esto dispara el useEffect para limpiar el resto
+        finally { setIsAuthenticated(false); setIsMobileMenuOpen(false); }
     }, []);
+
+    // **** MODIFICACIÓN CLAVE AQUÍ ****
+    // Lógica centralizada para cargar/seleccionar una conversación.
+    // `convId` puede ser `null` para limpiar la conversación activa.
+    const seleccionarConversacionActiva = useCallback(async (convId) => {
+        if (convId === null) {
+            setMensajesConversacionActiva([]);
+            setIdConversacionActiva(null);
+            return; // Simplemente limpia si convId es null
+        }
+        if (!convId) return; // No hacer nada si es undefined o vacío
+
+        console.log(`[App] Seleccionando conversación ${convId}`);
+        try {
+            const respuesta = await fetch(`${BACKEND_BASE_URL}/api/conversations/${convId}/messages`, {
+                credentials: 'include',
+            });
+
+            if (!respuesta.ok) {
+                const errorData = await respuesta.json().catch(() => ({ error: `Error ${respuesta.status}` }));
+                console.error("[App] Error API cargando mensajes:", errorData.error);
+                // Podrías tener un estado de error global para mostrar al usuario
+                setMensajesConversacionActiva([]);
+                setIdConversacionActiva(convId); // Mantener el ID para saber qué falló
+                throw new Error(errorData.error || `Error ${respuesta.status} cargando mensajes`);
+            }
+
+            const mensajesApi = await respuesta.json();
+            if (!Array.isArray(mensajesApi)) {
+                console.error("[App] Formato de mensajes inválido", mensajesApi);
+                setMensajesConversacionActiva([]);
+                setIdConversacionActiva(convId);
+                throw new Error("Formato de mensajes de la conversación inválido.");
+            }
+            
+            const mensajesFormateados = mensajesApi.map(msg => ({
+                id: msg.id, // Importante para el `key` en React y manejo de TTS
+                role: msg.rol === 'user' ? 'user' : 'model',
+                text: msg.tipo_mensaje === 'image'
+                    ? (msg.texto.includes('Error') || (msg.texto === `${BACKEND_BASE_URL}${msg.texto}`) ? '' : msg.texto.substring(msg.texto.lastIndexOf('/') + 1).replace(/[-_]/g, ' ').replace(/\.[^/.]+$/, "")) // Título simple de la imagen o vacío
+                    : msg.texto || '',
+                imageUrl: msg.tipo_mensaje === 'image' ? msg.texto : null,
+                fileName: msg.tipo_mensaje === 'image' ? (msg.texto.substring(msg.texto.lastIndexOf('/') + 1)) : null,
+                isImage: msg.tipo_mensaje === 'image',
+                date: msg.fecha_envio ? new Date(msg.fecha_envio) : new Date(), // Asegurar objeto Date
+                esError: !!msg.es_error,
+            }));
+
+            setMensajesConversacionActiva(mensajesFormateados);
+            setIdConversacionActiva(convId);
+
+        } catch (error) {
+            console.error("[App] Error seleccionando conversación activa:", error);
+            // Propagar el error para que Historial.jsx pueda mostrarlo si es necesario
+            throw error;
+        }
+        
+    }, []);
+    // **** FIN DE MODIFICACIÓN CLAVE ****
 
     const seleccionarArchivo = useCallback((nombre) => {
         setListaArchivosUsuario(prev => prev.map(a => a.name === nombre ? { ...a, seleccionado: !a.seleccionado } : a));
@@ -154,7 +213,7 @@ export const App = () => {
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isMobileMenuOpen, toggleMobileMenu]); // leerEnVozAltaActivado no necesita estar aquí
+    }, [isMobileMenuOpen, toggleMobileMenu]);
 
     useEffect(() => {
         const handleResize = () => { if (window.innerWidth >= 768) setIsMobileMenuOpen(false); };
@@ -176,8 +235,12 @@ export const App = () => {
             <Historial
                 theme={theme} cambiarTema={cambiarTema}
                 historial={historialConversaciones} establecerHistorial={setHistorialConversaciones}
-                establecerConversacion={setMensajesConversacionActiva}
-                idConversacionActiva={idConversacionActiva} establecerIdConversacionActiva={setIdConversacionActiva}
+                // **** MODIFICACIÓN CLAVE AQUÍ: Pasar la función centralizada ****
+                onSeleccionarConversacion={seleccionarConversacionActiva}
+                // Mantener `idConversacionActiva` para resaltado y lógica local en Historial
+                idConversacionActiva={idConversacionActiva}
+                establecerConversacionOriginal={setMensajesConversacionActiva} // Renombrar para claridad
+                establecerIdConversacionActivaOriginal={setIdConversacionActiva} // Renombrar para claridad
                 listaArchivosUsuario={listaArchivosUsuario} setListaArchivosUsuario={setListaArchivosUsuario}
                 manejarSeleccionArchivo={seleccionarArchivo} refrescarListaArchivos={refrescarArchivos}
                 estaPanelLateralAbierto={panelLateralAbierto} establecerEstaPanelLateralAbierto={setPanelLateralAbierto}
@@ -195,7 +258,7 @@ export const App = () => {
                 limpiarArchivosPdfNuevosYRefrescar={limpiarNuevosPdfsYRefrescar}
                 idConversacionActiva={idConversacionActiva} establecerIdConversacionActiva={setIdConversacionActiva}
                 temperatura={temperatura} topP={topP} idioma={idioma}
-                refrescarHistorial={cargarDatosUsuario} // Esta es la función para que Chat pueda pedir un refresh del historial de conversaciones
+                refrescarHistorial={cargarDatosUsuario}
                 leerEnVozAltaActivado={leerEnVozAltaActivado}
                 toggleMobileMenu={toggleMobileMenu}
                 backendUrl={BACKEND_BASE_URL}
@@ -204,3 +267,4 @@ export const App = () => {
     );
 };
 export default App;
+// --- END OF FILE App.jsx ---

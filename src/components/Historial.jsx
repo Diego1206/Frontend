@@ -1,3 +1,5 @@
+// --- START OF FILE Historial.jsx ---
+
 import React, { useRef, useEffect, useState } from 'react';
 import classNames from 'classnames';
 
@@ -23,12 +25,18 @@ export const IconoCerrar = ({ className = "" }) => ( <svg xmlns="http://www.w3.o
 const Historial = ({
     historial,
     establecerHistorial,
-    establecerConversacion,
+    // **** MODIFICACIÓN CLAVE: Recibir la función centralizada ****
+    onSeleccionarConversacion,
+    // Estas props ahora se llaman "Original" porque su uso principal
+    // será para resetear la conversación activa DESDE Historial.jsx.
+    // La carga de mensajes se hará a través de onSeleccionarConversacion.
+    establecerConversacionOriginal,
+    establecerIdConversacionActivaOriginal,
+    // **** FIN DE MODIFICACIÓN CLAVE ****
     listaArchivosUsuario,
     setListaArchivosUsuario,
     manejarSeleccionArchivo,
-    idConversacionActiva, // Recibe el ID de la conversación activa
-    establecerIdConversacionActiva, // Recibe la función para establecer el ID de la conversación activa
+    idConversacionActiva, 
     estaPanelLateralAbierto,
     establecerEstaPanelLateralAbierto,
     isMobileMenuOpen,
@@ -44,19 +52,19 @@ const Historial = ({
     currentUser,
     theme,
     cambiarTema,
-    backendUrl // Recibido de App.jsx
+    backendUrl
   }) => {
 
     const [mostrarAjustes, establecerMostrarAjustes] = useState(false);
     const [estaArchivosAbierto, establecerEstaArchivosAbierto] = useState(true);
-    const [indiceEditandoTitulo, establecerIndiceEditandoTitulo] = useState(null); // Mantiene el ID de la conversación que se está editando
+    const [indiceEditandoTitulo, establecerIndiceEditandoTitulo] = useState(null); 
     const [tituloEditado, establecerTituloEditado] = useState('');
     const refInputEdicion = useRef(null);
     const [terminoBusqueda, establecerTerminoBusqueda] = useState('');
     const [mostrarBarraBusqueda, establecerMostrarBarraBusqueda] = useState(false);
     const refInputBusqueda = useRef(null);
-    const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-    const [errorCargaMensajes, setErrorCargaMensajes] = useState('');
+    const [isLoadingMessages, setIsLoadingMessages] = useState(false); // Estado local para feedback
+    const [errorCargaMensajes, setErrorCargaMensajes] = useState(''); // Estado local para feedback
 
     const isClient = typeof window !== 'undefined';
 
@@ -77,69 +85,27 @@ const Historial = ({
       ? historial.filter(item => item && item.titulo && item.titulo.toLowerCase().includes(terminoBusqueda.toLowerCase()))
       : historial;
 
-    const manejarClicHistorial = async (conversationId) => { // El parámetro es el ID de la conversación
-      if (typeof establecerIdConversacionActiva !== 'function') {
-        console.error("Historial.jsx: establecerIdConversacionActiva no es una función!");
-        setErrorCargaMensajes(idioma === 'en' ? 'Internal error.' : 'Error interno.');
+    // **** MODIFICACIÓN CLAVE: usar onSeleccionarConversacion ****
+    const manejarClicHistorial = async (conversationId) => {
+      if (typeof onSeleccionarConversacion !== 'function') {
+        console.error("Historial.jsx: onSeleccionarConversacion no es una función!");
+        setErrorCargaMensajes(idioma === 'en' ? 'Internal error (handler missing).' : 'Error interno (manejador ausente).');
         return;
       }
-       if (typeof establecerConversacion !== 'function') {
-        console.error("Historial.jsx: establecerConversacion no es una función!");
-        setErrorCargaMensajes(idioma === 'en' ? 'Internal error.' : 'Error interno.');
-        return;
-      }
-
+      setIsLoadingMessages(true);
+      setErrorCargaMensajes('');
       try {
-        console.log("[Historial] Iniciando carga para Conv ID:", conversationId);
-        setIsLoadingMessages(true);
-        setErrorCargaMensajes('');
-
-        const respuesta = await fetch(`${backendUrl}/api/conversations/${conversationId}/messages`, {
-          credentials: 'include',
-        });
-        console.log(`[Historial] Fetch ${backendUrl}/api/conversations/${conversationId}/messages - Status:`, respuesta.status);
-
-        if (!respuesta.ok) {
-            const errorData = await respuesta.json().catch(() => ({ error: `Error ${respuesta.status}`}));
-            console.error("[Historial] Error API cargando mensajes:", errorData.error);
-            setErrorCargaMensajes(idioma === 'en' ? `Error: ${errorData.error}` : `Error: ${errorData.error}`);
-            setIsLoadingMessages(false);
-            return;
-        }
-
-        const data = await respuesta.json();
-        console.log("[Historial] Datos recibidos de la API:", data);
-
-        if (!Array.isArray(data)) {
-          console.error("[Historial] Datos no válidos (no es array):", data);
-          setErrorCargaMensajes(idioma === 'en' ? 'Error loading messages (invalid format).' : 'Error cargando mensajes (formato inválido).');
-          setIsLoadingMessages(false);
-          return;
-        }
-
-        const mensajesFormateados = data.map((mensaje) => ({
-            role: mensaje.rol === 'user' ? 'user' : 'model',
-            text: mensaje.texto || '',
-            imageUrl: mensaje.imageUrl || null, // Incluir campos de imagen
-            fileName: mensaje.fileName || null,
-            isImage: !!mensaje.isImage,
-            date: mensaje.fecha_envio || new Date().toISOString(),
-            esError: mensaje.esError !== undefined ? mensaje.esError : (mensaje.role === 'model' && !mensaje.texto && !mensaje.imageUrl), // Mejorar detección de error
-          }));
-
-        console.log("[Historial] Mensajes formateados:", mensajesFormateados);
-
-        establecerConversacion(mensajesFormateados);
-        establecerIdConversacionActiva(conversationId); // <--- CORRECCIÓN APLICADA AQUÍ
-
+        console.log("[Historial] Llamando onSeleccionarConversacion para Conv ID:", conversationId);
+        await onSeleccionarConversacion(conversationId); // Llama a la función de App.jsx
+        console.log("[Historial] onSeleccionarConversacion completado para Conv ID:", conversationId);
       } catch (error) {
-        console.error("[Historial] Catch Error cargando mensajes para Conv ID", conversationId, ":", error);
-        setErrorCargaMensajes(idioma === 'en' ? `Error loading messages: ${error.message}` : `Error cargando mensajes: ${error.message}`);
+        console.error("[Historial] Error al llamar onSeleccionarConversacion para Conv ID", conversationId, ":", error);
+        setErrorCargaMensajes(idioma === 'en' ? `Error loading: ${error.message}` : `Error al cargar: ${error.message}`);
       } finally {
         setIsLoadingMessages(false);
-        console.log("[Historial] Carga finalizada para Conv ID:", conversationId);
       }
     };
+    // **** FIN DE MODIFICACIÓN CLAVE ****
 
     const manejarClicHistorialWrapper = async (conversationId) => {
       if (isClient && window.innerWidth < 768 && typeof toggleMobileMenu === 'function') {
@@ -156,9 +122,9 @@ const Historial = ({
                 const response = await fetch(`${backendUrl}/api/conversations/${idABorrar}`, { method: 'DELETE', credentials: 'include' });
                 if (response.ok) {
                     establecerHistorial((historialPrevio) => Array.isArray(historialPrevio) ? historialPrevio.filter((conv) => conv && conv.id !== idABorrar) : []);
-                    if (idABorrar === idConversacionActiva) { // Usar prop correcta
-                        establecerConversacion([]);
-                        establecerIdConversacionActiva(null); // Usar prop correcta
+                    if (idABorrar === idConversacionActiva) {
+                        if (typeof establecerConversacionOriginal === 'function') establecerConversacionOriginal([]);
+                        if (typeof establecerIdConversacionActivaOriginal === 'function') establecerIdConversacionActivaOriginal(null);
                     }
                 } else {
                     const errorData = await response.json().catch(() => ({ error: `Error ${response.status}` }));
@@ -171,6 +137,7 @@ const Historial = ({
         }
     };
 
+    // **** MODIFICACIÓN CLAVE: asegurar que limpiar también use setters originales si es necesario ****
     const manejarNuevaPagina = () => {
         establecerIndiceEditandoTitulo(null);
         establecerTituloEditado('');
@@ -179,10 +146,13 @@ const Historial = ({
         if (typeof setListaArchivosUsuario === 'function') {
             setListaArchivosUsuario(prev => Array.isArray(prev) ? prev.map(f => f.esNuevo ? f : {...f, seleccionado: false}) : []);
         }
-        establecerConversacion([]);
-        if (typeof establecerIdConversacionActiva === 'function') establecerIdConversacionActiva(null); // Usar prop correcta
+        // Usar los setters "originales" pasados desde App para resetear el estado del chat
+        if (typeof establecerConversacionOriginal === 'function') establecerConversacionOriginal([]);
+        if (typeof establecerIdConversacionActivaOriginal === 'function') establecerIdConversacionActivaOriginal(null);
+        
         setErrorCargaMensajes('');
     };
+    // **** FIN DE MODIFICACIÓN CLAVE ****
 
     const manejarNuevaPaginaWrapper = () => {
          if (isClient && window.innerWidth < 768 && typeof toggleMobileMenu === 'function') {
@@ -211,7 +181,7 @@ const Historial = ({
             establecerIndiceEditandoTitulo(null); establecerTituloEditado('');
             return;
         }
-        const originalHistory = historial.map(item => ({...item})); // Copia profunda simple
+        const originalHistory = historial.map(item => ({...item}));
         establecerHistorial(historialPrevio => historialPrevio.map(item => item && item.id === idAGuardar ? { ...item, titulo: nuevoTitulo } : item ));
         establecerIndiceEditandoTitulo(null);
         establecerTituloEditado('');
@@ -353,18 +323,18 @@ const Historial = ({
                             <ul className="space-y-1">
                                 {historialFiltrado.map((item) => {
                                     if (!item || typeof item.id === 'undefined') return null;
-                                    const isSelected = item.id === idConversacionActiva; // Usar prop correcta
+                                    const isSelected = item.id === idConversacionActiva; 
                                     const isEditing = indiceEditandoTitulo === item.id;
                                     return (
                                         <li key={item.id}>
                                             <div onClick={() => !isEditing && manejarClicHistorialWrapper(item.id)}
-                                                className={classNames( 'w-full group flex justify-between items-center text-left p-2 rounded-md transition-colors text-sm relative', { 'cursor-pointer hover:bg-hover-item': !isEditing, 'bg-active-item font-medium': isSelected && !isEditing, 'bg-input': isEditing, 'opacity-50 pointer-events-none': isLoadingMessages && isSelected, } )} title={item.titulo || ''} >
-                                                {isLoadingMessages && isSelected && ( <div className="absolute inset-0 flex items-center justify-center rounded-md z-10 bg-[var(--bg-surface)] bg-opacity-50"> <div className="w-4 h-4 border-b-2 rounded-full animate-spin border-secondary"></div> </div> )}
+                                                className={classNames( 'w-full group flex justify-between items-center text-left p-2 rounded-md transition-colors text-sm relative', { 'cursor-pointer hover:bg-hover-item': !isEditing, 'bg-active-item font-medium': isSelected && !isEditing, 'bg-input': isEditing, 'opacity-50 pointer-events-none': isLoadingMessages && idConversacionActiva === item.id, } )} title={item.titulo || ''} >
+                                                {isLoadingMessages && idConversacionActiva === item.id && ( <div className="absolute inset-0 flex items-center justify-center rounded-md z-10 bg-sidebar bg-opacity-75"> <div className="w-4 h-4 border-b-2 rounded-full animate-spin border-secondary"></div> </div> )}
                                                 {isEditing ? ( <input ref={refInputEdicion} type="text" value={tituloEditado} onChange={manejarCambioTitulo} onKeyDown={manejarTeclaEnInput} onBlur={manejarGuardarTitulo} className="flex-1 px-1 py-0 mr-2 text-sm outline-none z-10 bg-transparent text-primary border-b border-accent" onClick={(e) => e.stopPropagation()} /> ) : ( <span className={classNames( 'flex-1 pr-2 truncate', { 'text-primary': isSelected, 'text-secondary group-hover:text-primary': !isSelected } )}> {item.titulo} </span> )}
                                                 {!isEditing && (
                                                      <div className={classNames( 'flex items-center flex-shrink-0 space-x-1 transition-opacity z-20', 'opacity-0 focus-within:opacity-100', { 'opacity-100': isSelected, 'md:group-hover:opacity-100': !isSelected } )}>
                                                          <button onClick={(e) => { e.stopPropagation(); manejarIniciarEdicion(item.id, item.titulo); }} className="p-1 rounded-md text-muted hover:text-primary hover:bg-hover-item cursor-pointer" title={idioma === 'en' ? "Rename" : "Renombrar"}> <IconoEditar className="transition-colors duration-150 ease-in-out" /> </button>
-                                                         <button onClick={(e) => { e.stopPropagation(); manejarBorrarHistorial(item.id); }} className="p-1 rounded-md text-muted hover:bg-hover-item cursor-pointer" title={idioma === 'en' ? "Delete" : "Borrar"}> <IconoPapelera className="group-hover:stroke-[var(--text-error)] transition-colors duration-150 ease-in-out" /> </button>
+                                                         <button onClick={(e) => { e.stopPropagation(); manejarBorrarHistorial(item.id); }} className="p-1 rounded-md text-muted hover:bg-hover-item cursor-pointer" title={idioma === 'en' ? "Delete" : "Borrar"}> <IconoPapelera className="group-hover:stroke-error transition-colors duration-150 ease-in-out" /> </button>
                                                      </div>
                                                 )}
                                              </div>
@@ -395,7 +365,7 @@ const Historial = ({
                                               <div key={archivo.name} className={classNames( 'group flex items-center p-1.5 rounded-md transition-colors text-sm', { 'bg-active-item': isSelected, 'hover:bg-hover-item': !isSelected } )}>
                                                     <input type="checkbox" value={archivo.name} checked={isSelected} onChange={() => manejarSeleccionArchivo(archivo.name)} className="w-4 h-4 mr-2 rounded cursor-pointer flex-shrink-0 form-checkbox bg-input border-input text-accent focus:ring-accent/50 focus:ring-1 focus:ring-offset-0" id={`file-checkbox-${archivo.name}`} />
                                                     <label htmlFor={`file-checkbox-${archivo.name}`} className={classNames( 'flex-1 truncate cursor-pointer', { 'text-accent': isSelected, 'text-secondary group-hover:text-primary': !isSelected } )} title={archivo.displayName || ''}> {archivo.displayName} </label>
-                                                   <button onClick={(e) => { e.stopPropagation(); manejarBorrarArchivo(archivo.name, archivo.displayName); }} className={classNames( 'flex-shrink-0 p-1 ml-auto rounded-md text-muted hover:bg-hover-item cursor-pointer', 'transition-opacity focus-within:opacity-100', 'opacity-0', { 'opacity-100': isSelected, 'md:group-hover:opacity-100': !isSelected } )} title={idioma === 'en' ? "Delete file" : "Borrar archivo"}> <IconoPapelera className="group-hover:stroke-[var(--text-error)] transition-colors duration-150 ease-in-out" /> </button>
+                                                   <button onClick={(e) => { e.stopPropagation(); manejarBorrarArchivo(archivo.name, archivo.displayName); }} className={classNames( 'flex-shrink-0 p-1 ml-auto rounded-md text-muted hover:bg-hover-item cursor-pointer', 'transition-opacity focus-within:opacity-100', 'opacity-0', { 'opacity-100': isSelected, 'md:group-hover:opacity-100': !isSelected } )} title={idioma === 'en' ? "Delete file" : "Borrar archivo"}> <IconoPapelera className="group-hover:stroke-error transition-colors duration-150 ease-in-out" /> </button>
                                               </div>
                                           );
                                       })}
@@ -415,7 +385,7 @@ const Historial = ({
                      <div className={classNames( 'flex', { 'justify-between items-center space-x-2': estaPanelLateralAbierto, 'flex-col items-center space-y-4': !estaPanelLateralAbierto } )}>
                          <button onClick={cambiarTema} className={classNames('p-2 transition-colors rounded-md text-secondary hover:text-primary cursor-pointer', {'hover:bg-hover-item': estaPanelLateralAbierto})} title={theme === 'dark' ? (idioma === 'en' ? 'Light Mode' : 'Modo Claro') : (idioma === 'en' ? 'Dark Mode' : 'Modo Oscuro')} > {theme === 'dark' ? <IconoSol /> : <IconoLuna />} </button>
                          <button onClick={() => establecerMostrarAjustes(true)} className={classNames('p-2 transition-colors rounded-md text-secondary hover:text-primary cursor-pointer', {'hover:bg-hover-item': estaPanelLateralAbierto})} title={idioma==='en'?'Settings':'Ajustes'}> <IconoAjustes /> </button>
-                        <button onClick={manejarLogout} className={classNames('group p-2 transition-colors rounded-md text-muted cursor-pointer', {'hover:bg-hover-item': estaPanelLateralAbierto})} title={idioma==='en'?'Logout':'Cerrar Sesión'}> <IconoLogout className="group-hover:stroke-[var(--text-error)] transition-colors duration-150 ease-in-out" /> </button>
+                        <button onClick={manejarLogout} className={classNames('group p-2 transition-colors rounded-md text-muted cursor-pointer', {'hover:bg-hover-item': estaPanelLateralAbierto})} title={idioma==='en'?'Logout':'Cerrar Sesión'}> <IconoLogout className="group-hover:stroke-error transition-colors duration-150 ease-in-out" /> </button>
                      </div>
                  </div>
             </div>
@@ -424,3 +394,4 @@ const Historial = ({
 };
 
 export default Historial;
+// --- END OF FILE Historial.jsx ---
