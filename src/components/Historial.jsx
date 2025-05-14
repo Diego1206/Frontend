@@ -51,6 +51,7 @@ const Historial = ({
     backendUrl
   }) => {
 
+    // ... (resto de tus estados y hooks siguen igual)
     const [mostrarAjustes, establecerMostrarAjustes] = useState(false);
     const [estaArchivosAbierto, establecerEstaArchivosAbierto] = useState(true);
     const [indiceEditandoTitulo, establecerIndiceEditandoTitulo] = useState(null);
@@ -231,11 +232,12 @@ const Historial = ({
         }
     };
 
+
     const sidebarClasses = classNames(
         'flex', 'flex-col', 'flex-shrink-0', 'overflow-y-auto',
         'bg-sidebar', 'border-r', 'border-divider',
         'transition-transform', 'duration-300', 'ease-in-out', 'custom-scrollbar',
-        'fixed', 'inset-y-0', 'left-0', 'z-40', 'w-72', 'p-4', 
+        'fixed', 'inset-y-0', 'left-0', 'z-40', 'w-72', 'p-4',
         { 'translate-x-0': isMobileMenuOpen, '-translate-x-full': !isMobileMenuOpen },
         'md:relative', 'md:inset-auto', 'md:translate-x-0', 'md:transition-all',
         { 'md:w-64 lg:w-72 md:p-4': estaPanelLateralAbierto, 'md:w-16 md:p-2 md:pt-4': !estaPanelLateralAbierto }
@@ -245,20 +247,21 @@ const Historial = ({
 
     return (
         <aside id="historial-sidebar" className={sidebarClasses}>
-            {/* --- MODIFICACIÓN PROPUESTA --- */}
-            {/* Botón de cierre general del menú móvil. */}
-            {/* Ajustado top y right para intentar evitar superposición. */}
+            {/* --- MODIFICACIÓN PARA ELIMINAR LA "X" --- */}
+            {/* Se comenta o elimina el botón que renderiza el IconoCerrar general del menú móvil. */}
+            {/*
             {(isMobile && typeof toggleMobileMenu === 'function') && (
                  <button
                     onClick={toggleMobileMenu}
-                    // SE HAN CAMBIADO top-3 right-3 a top-5 right-5
-                    className="absolute top-5 right-5 p-1.5 rounded-md text-secondary hover:text-primary hover:bg-hover-item md:hidden z-50" 
+                    className="absolute top-5 right-5 p-1.5 rounded-md text-secondary hover:text-primary hover:bg-hover-item md:hidden z-50"
                     title={idioma === 'en' ? 'Close menu' : 'Cerrar menú'}
                  >
                     <IconoCerrar />
                  </button>
             )}
-            {/* --- FIN DE MODIFICACIÓN PROPUESTA --- */}
+            */}
+            {/* --- FIN DE MODIFICACIÓN --- */}
+
 
             <div className={classNames( 'hidden md:flex items-center mb-4 relative', { 'justify-between space-x-2': estaPanelLateralAbierto, 'w-full justify-center': !estaPanelLateralAbierto } )}>
                  {estaPanelLateralAbierto && (
@@ -275,7 +278,10 @@ const Historial = ({
                  </button>
             </div>
 
-             {mostrarAjustes && (
+            {/* ... (El resto del componente Historial.jsx sigue exactamente igual que antes) ... */}
+            {/* No es necesario repetirlo todo, solo el cambio anterior es el relevante para este problema */}
+            
+            {mostrarAjustes && (
                  <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-sm bg-modal-overlay">
                     <div className="p-6 w-full max-w-md relative rounded-lg shadow-xl bg-surface border border-divider">
                         <h2 className="text-lg font-semibold mb-4 text-primary">{idioma === 'en' ? 'Settings' : 'Ajustes'}</h2>
