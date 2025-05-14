@@ -14,9 +14,8 @@ const IconoDescargar = ({className = ""}) => ( /* ... tu SVG ... */ <svg xmlns="
 const MODELOS_DISPONIBLES = {
     "gemini-1.5-flash": "Gemini 1.5 Flash (Rápido)",
     "gemini-1.5-pro": "Gemini 1.5 Pro (Avanzado)",
-    // Quité los modelos que podrían no estar disponibles para todos
-    // "gemini-2.0-flash": "Gemini 2.0 Flash",
-    // "gemini-2.5-pro-preview-03-25": "Gemini 2.5 Pro (Preview)"
+     "gemini-2.0-flash": "Gemini 2.0 Flash",
+   "gemini-2.5-pro-preview-03-25": "Gemini 2.5 Pro (Preview)"
 };
 const MODELO_POR_DEFECTO_FRONTEND = "gemini-1.5-flash";
 
