@@ -3,7 +3,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import classNames from 'classnames';
 
-
+// --- Tus Íconos ---
 const IconoPapelera = ({ className = "" }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /> </svg> );
 const IconoMas = ({ className = "" }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 mr-1 md:mr-0 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /> </svg> );
 const IconoChevronIzquierda = ({ className = "" }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /> </svg> );
@@ -21,22 +21,18 @@ export const IconoAltavozActivo = ({ className = "" }) => ( <svg xmlns="http://w
 export const IconoAltavozInactivo = ({ className = "" }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zm11.414-9l-9 9" /> </svg> );
 export const IconoMenu = ({ className = "" }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /> </svg> );
 export const IconoCerrar = ({ className = "" }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /> </svg> );
+// --- Fin Íconos ---
 
 const Historial = ({
     historial,
     establecerHistorial,
-    // **** MODIFICACIÓN CLAVE: Recibir la función centralizada ****
     onSeleccionarConversacion,
-    // Estas props ahora se llaman "Original" porque su uso principal
-    // será para resetear la conversación activa DESDE Historial.jsx.
-    // La carga de mensajes se hará a través de onSeleccionarConversacion.
     establecerConversacionOriginal,
     establecerIdConversacionActivaOriginal,
-    // **** FIN DE MODIFICACIÓN CLAVE ****
     listaArchivosUsuario,
     setListaArchivosUsuario,
     manejarSeleccionArchivo,
-    idConversacionActiva, 
+    idConversacionActiva,
     estaPanelLateralAbierto,
     establecerEstaPanelLateralAbierto,
     isMobileMenuOpen,
@@ -57,14 +53,14 @@ const Historial = ({
 
     const [mostrarAjustes, establecerMostrarAjustes] = useState(false);
     const [estaArchivosAbierto, establecerEstaArchivosAbierto] = useState(true);
-    const [indiceEditandoTitulo, establecerIndiceEditandoTitulo] = useState(null); 
+    const [indiceEditandoTitulo, establecerIndiceEditandoTitulo] = useState(null);
     const [tituloEditado, establecerTituloEditado] = useState('');
     const refInputEdicion = useRef(null);
     const [terminoBusqueda, establecerTerminoBusqueda] = useState('');
     const [mostrarBarraBusqueda, establecerMostrarBarraBusqueda] = useState(false);
     const refInputBusqueda = useRef(null);
-    const [isLoadingMessages, setIsLoadingMessages] = useState(false); // Estado local para feedback
-    const [errorCargaMensajes, setErrorCargaMensajes] = useState(''); // Estado local para feedback
+    const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+    const [errorCargaMensajes, setErrorCargaMensajes] = useState('');
 
     const isClient = typeof window !== 'undefined';
 
@@ -85,7 +81,6 @@ const Historial = ({
       ? historial.filter(item => item && item.titulo && item.titulo.toLowerCase().includes(terminoBusqueda.toLowerCase()))
       : historial;
 
-    // **** MODIFICACIÓN CLAVE: usar onSeleccionarConversacion ****
     const manejarClicHistorial = async (conversationId) => {
       if (typeof onSeleccionarConversacion !== 'function') {
         console.error("Historial.jsx: onSeleccionarConversacion no es una función!");
@@ -95,9 +90,7 @@ const Historial = ({
       setIsLoadingMessages(true);
       setErrorCargaMensajes('');
       try {
-        console.log("[Historial] Llamando onSeleccionarConversacion para Conv ID:", conversationId);
-        await onSeleccionarConversacion(conversationId); // Llama a la función de App.jsx
-        console.log("[Historial] onSeleccionarConversacion completado para Conv ID:", conversationId);
+        await onSeleccionarConversacion(conversationId);
       } catch (error) {
         console.error("[Historial] Error al llamar onSeleccionarConversacion para Conv ID", conversationId, ":", error);
         setErrorCargaMensajes(idioma === 'en' ? `Error loading: ${error.message}` : `Error al cargar: ${error.message}`);
@@ -105,7 +98,6 @@ const Historial = ({
         setIsLoadingMessages(false);
       }
     };
-    // **** FIN DE MODIFICACIÓN CLAVE ****
 
     const manejarClicHistorialWrapper = async (conversationId) => {
       if (isClient && window.innerWidth < 768 && typeof toggleMobileMenu === 'function') {
@@ -137,7 +129,6 @@ const Historial = ({
         }
     };
 
-    // **** MODIFICACIÓN CLAVE: asegurar que limpiar también use setters originales si es necesario ****
     const manejarNuevaPagina = () => {
         establecerIndiceEditandoTitulo(null);
         establecerTituloEditado('');
@@ -146,13 +137,10 @@ const Historial = ({
         if (typeof setListaArchivosUsuario === 'function') {
             setListaArchivosUsuario(prev => Array.isArray(prev) ? prev.map(f => f.esNuevo ? f : {...f, seleccionado: false}) : []);
         }
-        // Usar los setters "originales" pasados desde App para resetear el estado del chat
         if (typeof establecerConversacionOriginal === 'function') establecerConversacionOriginal([]);
         if (typeof establecerIdConversacionActivaOriginal === 'function') establecerIdConversacionActivaOriginal(null);
-        
         setErrorCargaMensajes('');
     };
-    // **** FIN DE MODIFICACIÓN CLAVE ****
 
     const manejarNuevaPaginaWrapper = () => {
          if (isClient && window.innerWidth < 768 && typeof toggleMobileMenu === 'function') {
@@ -160,7 +148,6 @@ const Historial = ({
          }
          manejarNuevaPagina();
      };
-
 
     const manejarIniciarEdicion = (conversationId, tituloActual) => {
         establecerIndiceEditandoTitulo(conversationId);
@@ -248,7 +235,7 @@ const Historial = ({
         'flex', 'flex-col', 'flex-shrink-0', 'overflow-y-auto',
         'bg-sidebar', 'border-r', 'border-divider',
         'transition-transform', 'duration-300', 'ease-in-out', 'custom-scrollbar',
-        'fixed', 'inset-y-0', 'left-0', 'z-40', 'w-72', 'p-4',
+        'fixed', 'inset-y-0', 'left-0', 'z-40', 'w-72', 'p-4', // Asegura que p-4 no interfiera con iconos absolutos si los hubiera
         { 'translate-x-0': isMobileMenuOpen, '-translate-x-full': !isMobileMenuOpen },
         'md:relative', 'md:inset-auto', 'md:translate-x-0', 'md:transition-all',
         { 'md:w-64 lg:w-72 md:p-4': estaPanelLateralAbierto, 'md:w-16 md:p-2 md:pt-4': !estaPanelLateralAbierto }
@@ -258,8 +245,15 @@ const Historial = ({
 
     return (
         <aside id="historial-sidebar" className={sidebarClasses}>
+            {/* Botón de cierre general del menú móvil. Este NO es el que queremos quitar del botón "Nueva Conversación" */}
             {(isMobile && typeof toggleMobileMenu === 'function') && (
-                 <button onClick={toggleMobileMenu} className="absolute top-3 right-3 p-1 rounded-md text-secondary hover:text-primary hover:bg-hover-item md:hidden" title={idioma === 'en' ? 'Close menu' : 'Cerrar menú'} > <IconoCerrar /> </button>
+                 <button 
+                    onClick={toggleMobileMenu} 
+                    className="absolute top-3 right-3 p-1.5 rounded-md text-secondary hover:text-primary hover:bg-hover-item md:hidden z-50" // Añadido z-50 por si acaso
+                    title={idioma === 'en' ? 'Close menu' : 'Cerrar menú'} 
+                 > 
+                    <IconoCerrar /> 
+                 </button>
             )}
 
             <div className={classNames( 'hidden md:flex items-center mb-4 relative', { 'justify-between space-x-2': estaPanelLateralAbierto, 'w-full justify-center': !estaPanelLateralAbierto } )}>
@@ -278,7 +272,7 @@ const Historial = ({
             </div>
 
              {mostrarAjustes && (
-                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm bg-modal-overlay">
+                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-sm bg-modal-overlay"> {/* Aumentado z-index si es necesario */}
                     <div className="p-6 w-full max-w-md relative rounded-lg shadow-xl bg-surface border border-divider">
                         <h2 className="text-lg font-semibold mb-4 text-primary">{idioma === 'en' ? 'Settings' : 'Ajustes'}</h2>
                          <div className="mb-4">
@@ -306,15 +300,28 @@ const Historial = ({
              )}
 
             <div className={classNames('flex flex-col h-full', { 'md:items-center': !estaPanelLateralAbierto })}>
-                 <div className={classNames('flex-shrink-0', { 'mb-4 w-full px-1': estaPanelLateralAbierto, 'w-auto mb-4 md:w-full': !estaPanelLateralAbierto })}>
-                     <button onClick={manejarNuevaPaginaWrapper} className={classNames( 'p-2.5 font-medium rounded-lg transition-colors text-sm flex items-center shadow-sm cursor-pointer bg-button-primary text-button-primary', { 'w-full justify-center': estaPanelLateralAbierto, 'justify-center': !estaPanelLateralAbierto } )} title={idioma === 'en' ? "New chat" : "Nueva conversación"}>
+                 <div className={classNames('flex-shrink-0 relative', { 'mb-4 w-full px-1': estaPanelLateralAbierto, 'w-auto mb-4 md:w-full': !estaPanelLateralAbierto })}> {/* Añadido relative aquí por si acaso */}
+                     {/* --- BOTÓN NUEVA CONVERSACIÓN --- */}
+                     {/* Se asume que la "X" no debe estar aquí. Si tu imagen la muestra aquí, */}
+                     {/* significa que hay algo más en tu entorno local añadiéndola o una superposición. */}
+                     <button 
+                        onClick={manejarNuevaPaginaWrapper} 
+                        className={classNames( 
+                            'p-2.5 font-medium rounded-lg transition-colors text-sm flex items-center shadow-sm cursor-pointer bg-button-primary text-button-primary', 
+                            { 'w-full justify-center': estaPanelLateralAbierto, 'justify-center': !estaPanelLateralAbierto } 
+                        )} 
+                        title={idioma === 'en' ? "New chat" : "Nueva conversación"}
+                     >
                          <IconoMas className={classNames({'md:mr-0': !estaPanelLateralAbierto})} />
                          {(estaPanelLateralAbierto || isMobile) && <span className="ml-1">{idioma === 'en' ? 'New Conversation' : 'Nueva Conversación'}</span>}
+                         {/* Aquí NO se añade el IconoCerrar. Si lo ves, proviene de otro sitio o un error de CSS. */}
                      </button>
+                     {/* --- FIN BOTÓN NUEVA CONVERSACIÓN --- */}
                  </div>
 
                 {(estaPanelLateralAbierto || isMobile) && <hr className="mb-4 flex-shrink-0 border-divider" />}
 
+                {/* El resto del componente sigue igual */}
                 <div className={classNames('flex flex-col flex-grow min-h-0 mb-6', { 'md:hidden': !estaPanelLateralAbierto && !isMobile })}>
                     <h2 className="text-xs font-semibold uppercase tracking-wider mb-2 px-1 flex-shrink-0 text-muted">{idioma === 'en' ? 'History' : 'Historial'}</h2>
                     {errorCargaMensajes && ( <p className="px-2 py-1 mb-2 text-xs rounded border bg-error-notification text-error border-error-notification"> {errorCargaMensajes} </p> )}
@@ -323,7 +330,7 @@ const Historial = ({
                             <ul className="space-y-1">
                                 {historialFiltrado.map((item) => {
                                     if (!item || typeof item.id === 'undefined') return null;
-                                    const isSelected = item.id === idConversacionActiva; 
+                                    const isSelected = item.id === idConversacionActiva;
                                     const isEditing = indiceEditandoTitulo === item.id;
                                     return (
                                         <li key={item.id}>
@@ -360,12 +367,12 @@ const Historial = ({
                                   <div className="pb-2 pr-1 space-y-1 overflow-y-auto max-h-40 custom-scrollbar">
                                       {listaArchivosUsuario.filter(f => f && !f.esNuevo).map((archivo) => {
                                           if (!archivo || typeof archivo.name === 'undefined' || typeof archivo.seleccionado === 'undefined') return null;
-                                          const isSelected = !!archivo.seleccionado;
+                                          const isSelectedFile = !!archivo.seleccionado; // Renombrado para evitar conflicto con isSelected de conversación
                                           return (
-                                              <div key={archivo.name} className={classNames( 'group flex items-center p-1.5 rounded-md transition-colors text-sm', { 'bg-active-item': isSelected, 'hover:bg-hover-item': !isSelected } )}>
-                                                    <input type="checkbox" value={archivo.name} checked={isSelected} onChange={() => manejarSeleccionArchivo(archivo.name)} className="w-4 h-4 mr-2 rounded cursor-pointer flex-shrink-0 form-checkbox bg-input border-input text-accent focus:ring-accent/50 focus:ring-1 focus:ring-offset-0" id={`file-checkbox-${archivo.name}`} />
-                                                    <label htmlFor={`file-checkbox-${archivo.name}`} className={classNames( 'flex-1 truncate cursor-pointer', { 'text-accent': isSelected, 'text-secondary group-hover:text-primary': !isSelected } )} title={archivo.displayName || ''}> {archivo.displayName} </label>
-                                                   <button onClick={(e) => { e.stopPropagation(); manejarBorrarArchivo(archivo.name, archivo.displayName); }} className={classNames( 'flex-shrink-0 p-1 ml-auto rounded-md text-muted hover:bg-hover-item cursor-pointer', 'transition-opacity focus-within:opacity-100', 'opacity-0', { 'opacity-100': isSelected, 'md:group-hover:opacity-100': !isSelected } )} title={idioma === 'en' ? "Delete file" : "Borrar archivo"}> <IconoPapelera className="group-hover:stroke-error transition-colors duration-150 ease-in-out" /> </button>
+                                              <div key={archivo.name} className={classNames( 'group flex items-center p-1.5 rounded-md transition-colors text-sm', { 'bg-active-item': isSelectedFile, 'hover:bg-hover-item': !isSelectedFile } )}>
+                                                    <input type="checkbox" value={archivo.name} checked={isSelectedFile} onChange={() => manejarSeleccionArchivo(archivo.name)} className="w-4 h-4 mr-2 rounded cursor-pointer flex-shrink-0 form-checkbox bg-input border-input text-accent focus:ring-accent/50 focus:ring-1 focus:ring-offset-0" id={`file-checkbox-${archivo.name}`} />
+                                                    <label htmlFor={`file-checkbox-${archivo.name}`} className={classNames( 'flex-1 truncate cursor-pointer', { 'text-accent': isSelectedFile, 'text-secondary group-hover:text-primary': !isSelectedFile } )} title={archivo.displayName || ''}> {archivo.displayName} </label>
+                                                   <button onClick={(e) => { e.stopPropagation(); manejarBorrarArchivo(archivo.name, archivo.displayName); }} className={classNames( 'flex-shrink-0 p-1 ml-auto rounded-md text-muted hover:bg-hover-item cursor-pointer', 'transition-opacity focus-within:opacity-100', 'opacity-0', { 'opacity-100': isSelectedFile, 'md:group-hover:opacity-100': !isSelectedFile } )} title={idioma === 'en' ? "Delete file" : "Borrar archivo"}> <IconoPapelera className="group-hover:stroke-error transition-colors duration-150 ease-in-out" /> </button>
                                               </div>
                                           );
                                       })}
