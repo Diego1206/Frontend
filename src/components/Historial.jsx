@@ -235,7 +235,7 @@ const Historial = ({
         'flex', 'flex-col', 'flex-shrink-0', 'overflow-y-auto',
         'bg-sidebar', 'border-r', 'border-divider',
         'transition-transform', 'duration-300', 'ease-in-out', 'custom-scrollbar',
-        'fixed', 'inset-y-0', 'left-0', 'z-40', 'w-72', 'p-4', // Asegura que p-4 no interfiera con iconos absolutos si los hubiera
+        'fixed', 'inset-y-0', 'left-0', 'z-40', 'w-72', 'p-4', 
         { 'translate-x-0': isMobileMenuOpen, '-translate-x-full': !isMobileMenuOpen },
         'md:relative', 'md:inset-auto', 'md:translate-x-0', 'md:transition-all',
         { 'md:w-64 lg:w-72 md:p-4': estaPanelLateralAbierto, 'md:w-16 md:p-2 md:pt-4': !estaPanelLateralAbierto }
@@ -245,16 +245,20 @@ const Historial = ({
 
     return (
         <aside id="historial-sidebar" className={sidebarClasses}>
-            {/* Botón de cierre general del menú móvil. Este NO es el que queremos quitar del botón "Nueva Conversación" */}
+            {/* --- MODIFICACIÓN PROPUESTA --- */}
+            {/* Botón de cierre general del menú móvil. */}
+            {/* Ajustado top y right para intentar evitar superposición. */}
             {(isMobile && typeof toggleMobileMenu === 'function') && (
-                 <button 
-                    onClick={toggleMobileMenu} 
-                    className="absolute top-3 right-3 p-1.5 rounded-md text-secondary hover:text-primary hover:bg-hover-item md:hidden z-50" // Añadido z-50 por si acaso
-                    title={idioma === 'en' ? 'Close menu' : 'Cerrar menú'} 
-                 > 
-                    <IconoCerrar /> 
+                 <button
+                    onClick={toggleMobileMenu}
+                    // SE HAN CAMBIADO top-3 right-3 a top-5 right-5
+                    className="absolute top-5 right-5 p-1.5 rounded-md text-secondary hover:text-primary hover:bg-hover-item md:hidden z-50" 
+                    title={idioma === 'en' ? 'Close menu' : 'Cerrar menú'}
+                 >
+                    <IconoCerrar />
                  </button>
             )}
+            {/* --- FIN DE MODIFICACIÓN PROPUESTA --- */}
 
             <div className={classNames( 'hidden md:flex items-center mb-4 relative', { 'justify-between space-x-2': estaPanelLateralAbierto, 'w-full justify-center': !estaPanelLateralAbierto } )}>
                  {estaPanelLateralAbierto && (
@@ -272,7 +276,7 @@ const Historial = ({
             </div>
 
              {mostrarAjustes && (
-                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-sm bg-modal-overlay"> {/* Aumentado z-index si es necesario */}
+                 <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-sm bg-modal-overlay">
                     <div className="p-6 w-full max-w-md relative rounded-lg shadow-xl bg-surface border border-divider">
                         <h2 className="text-lg font-semibold mb-4 text-primary">{idioma === 'en' ? 'Settings' : 'Ajustes'}</h2>
                          <div className="mb-4">
@@ -300,28 +304,22 @@ const Historial = ({
              )}
 
             <div className={classNames('flex flex-col h-full', { 'md:items-center': !estaPanelLateralAbierto })}>
-                 <div className={classNames('flex-shrink-0 relative', { 'mb-4 w-full px-1': estaPanelLateralAbierto, 'w-auto mb-4 md:w-full': !estaPanelLateralAbierto })}> {/* Añadido relative aquí por si acaso */}
-                     {/* --- BOTÓN NUEVA CONVERSACIÓN --- */}
-                     {/* Se asume que la "X" no debe estar aquí. Si tu imagen la muestra aquí, */}
-                     {/* significa que hay algo más en tu entorno local añadiéndola o una superposición. */}
-                     <button 
-                        onClick={manejarNuevaPaginaWrapper} 
-                        className={classNames( 
-                            'p-2.5 font-medium rounded-lg transition-colors text-sm flex items-center shadow-sm cursor-pointer bg-button-primary text-button-primary', 
-                            { 'w-full justify-center': estaPanelLateralAbierto, 'justify-center': !estaPanelLateralAbierto } 
-                        )} 
+                 <div className={classNames('flex-shrink-0 relative', { 'mb-4 w-full px-1': estaPanelLateralAbierto, 'w-auto mb-4 md:w-full': !estaPanelLateralAbierto })}>
+                     <button
+                        onClick={manejarNuevaPaginaWrapper}
+                        className={classNames(
+                            'p-2.5 font-medium rounded-lg transition-colors text-sm flex items-center shadow-sm cursor-pointer bg-button-primary text-button-primary',
+                            { 'w-full justify-center': estaPanelLateralAbierto, 'justify-center': !estaPanelLateralAbierto }
+                        )}
                         title={idioma === 'en' ? "New chat" : "Nueva conversación"}
                      >
                          <IconoMas className={classNames({'md:mr-0': !estaPanelLateralAbierto})} />
                          {(estaPanelLateralAbierto || isMobile) && <span className="ml-1">{idioma === 'en' ? 'New Conversation' : 'Nueva Conversación'}</span>}
-                         {/* Aquí NO se añade el IconoCerrar. Si lo ves, proviene de otro sitio o un error de CSS. */}
                      </button>
-                     {/* --- FIN BOTÓN NUEVA CONVERSACIÓN --- */}
                  </div>
 
                 {(estaPanelLateralAbierto || isMobile) && <hr className="mb-4 flex-shrink-0 border-divider" />}
 
-                {/* El resto del componente sigue igual */}
                 <div className={classNames('flex flex-col flex-grow min-h-0 mb-6', { 'md:hidden': !estaPanelLateralAbierto && !isMobile })}>
                     <h2 className="text-xs font-semibold uppercase tracking-wider mb-2 px-1 flex-shrink-0 text-muted">{idioma === 'en' ? 'History' : 'Historial'}</h2>
                     {errorCargaMensajes && ( <p className="px-2 py-1 mb-2 text-xs rounded border bg-error-notification text-error border-error-notification"> {errorCargaMensajes} </p> )}
@@ -367,7 +365,7 @@ const Historial = ({
                                   <div className="pb-2 pr-1 space-y-1 overflow-y-auto max-h-40 custom-scrollbar">
                                       {listaArchivosUsuario.filter(f => f && !f.esNuevo).map((archivo) => {
                                           if (!archivo || typeof archivo.name === 'undefined' || typeof archivo.seleccionado === 'undefined') return null;
-                                          const isSelectedFile = !!archivo.seleccionado; // Renombrado para evitar conflicto con isSelected de conversación
+                                          const isSelectedFile = !!archivo.seleccionado;
                                           return (
                                               <div key={archivo.name} className={classNames( 'group flex items-center p-1.5 rounded-md transition-colors text-sm', { 'bg-active-item': isSelectedFile, 'hover:bg-hover-item': !isSelectedFile } )}>
                                                     <input type="checkbox" value={archivo.name} checked={isSelectedFile} onChange={() => manejarSeleccionArchivo(archivo.name)} className="w-4 h-4 mr-2 rounded cursor-pointer flex-shrink-0 form-checkbox bg-input border-input text-accent focus:ring-accent/50 focus:ring-1 focus:ring-offset-0" id={`file-checkbox-${archivo.name}`} />
