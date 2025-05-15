@@ -4,11 +4,11 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import remarkGfm from 'remark-gfm';
-import { IconoAltavozActivo, IconoAltavozInactivo, IconoMenu, IconoCerrar } from './Historial'; // Asume que están exportados aquí
+import { IconoAltavozActivo, IconoAltavozInactivo, IconoMenu } from './Historial'; // Asume que IconoMenu está exportado aquí
 
-const IconoAltavoz = ({ className = "" }) => ( /* ... tu SVG ... */ <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /> </svg> );
-const IconoDetenerAltavoz = ({ className = "" }) => ( /* ... tu SVG ... */ <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /> <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /> </svg> );
-const IconoDescargar = ({className = ""}) => ( /* ... tu SVG ... */ <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /> </svg> );
+const IconoAltavoz = ({ className = "" }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /> </svg> );
+const IconoDetenerAltavoz = ({ className = "" }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /> <path strokeLinecap="round" strokeLinejoin="round" d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /> </svg> );
+const IconoDescargar = ({className = ""}) => ( <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /> </svg> );
 
 
 const MODELOS_DISPONIBLES = {
@@ -54,7 +54,7 @@ const Chat = ({
     const refAreaTexto = useRef(null);
     const refContenedorScroll = useRef(null);
     const refUtterance = useRef(null);
-    const refConversacionActualParaTTS = useRef(conversacion); // Para evitar cierres stale en TTS
+    const refConversacionActualParaTTS = useRef(conversacion);
 
     useEffect(() => {
         refConversacionActualParaTTS.current = conversacion;
@@ -73,7 +73,7 @@ const Chat = ({
         }
     }, []);
 
-    const manejarHablarDetener = useCallback((texto, mensajeId) => { // Usar mensajeId para identificar
+    const manejarHablarDetener = useCallback((texto, mensajeId) => {
         if (!ttsDisponible || !texto) return;
         const synth = window.speechSynthesis;
         if (synth.speaking && idMensajeHablando === mensajeId) {
@@ -91,7 +91,7 @@ const Chat = ({
     }, [ttsDisponible, idioma, idMensajeHablando]);
 
     useEffect(() => {
-        if (!leerEnVozAltaActivado || !ttsDisponible || refConversacionActualParaTTS.current.length === 0) return;
+        if (!leerEnVozAltaActivado || !ttsDisponible || !refConversacionActualParaTTS.current || refConversacionActualParaTTS.current.length === 0) return;
         
         const convActual = refConversacionActualParaTTS.current;
         const ultimoMensaje = convActual[convActual.length - 1];
@@ -99,23 +99,19 @@ const Chat = ({
         if (ultimoMensaje && ultimoMensaje.role === 'model' && !ultimoMensaje.esError && ultimoMensaje.text && !ultimoMensaje.isImage) {
             if (window.speechSynthesis.speaking) {
                 if (refUtterance.current && refUtterance.current.text !== ultimoMensaje.text) {
-                    window.speechSynthesis.cancel(); // Detener si es un texto diferente
-                } else {
-                    return; // Ya está hablando o acaba de hablar este mensaje
-                }
+                    window.speechSynthesis.cancel();
+                } else { return; }
             }
-            // Usar un pequeño retardo para permitir que el DOM se actualice
             const timerId = setTimeout(() => {
-                 // Volver a verificar por si el componente se desmontó o el mensaje cambió
-                 const convActualizadaParaTTS = refConversacionActualParaTTS.current;
-                 if (convActualizadaParaTTS.length > 0 && convActualizadaParaTTS[convActualizadaParaTTS.length - 1] === ultimoMensaje) {
+                 const convActualizadaParaTTS = refConversacionActualParaTTS.current; // Re-check
+                 if (convActualizadaParaTTS && convActualizadaParaTTS.length > 0 && convActualizadaParaTTS[convActualizadaParaTTS.length - 1] === ultimoMensaje) {
                      console.log("[TTS Auto] Leyendo ID:", ultimoMensaje.id, ultimoMensaje.text.substring(0,30) + "...");
-                     manejarHablarDetener(ultimoMensaje.text, ultimoMensaje.id); // Usar ID único del mensaje
+                     manejarHablarDetener(ultimoMensaje.text, ultimoMensaje.id);
                  }
             }, 150); 
              return () => clearTimeout(timerId);
         }
-    }, [leerEnVozAltaActivado, ttsDisponible, manejarHablarDetener, conversacion]); // 'conversacion' es importante aquí
+    }, [leerEnVozAltaActivado, ttsDisponible, manejarHablarDetener, conversacion]);
 
 
     const desplazarHaciaAbajo = useCallback(() => {
@@ -140,15 +136,22 @@ const Chat = ({
 
 
     const manejarDescargaImagen = async (imageUrl, fileName) => {
+        if (!imageUrl) {
+            console.error("manejarDescargaImagen: imageUrl es indefinida o nula.");
+            return;
+        }
         try {
             const nombrePorDefecto = fileName || `imagen_generada_${Date.now()}.png`;
             
-            if (imageUrl.startsWith('data:')) { /* ... tu código de descarga para data:URL ... */ return; }
-            
-            const urlCompletaParaFetch = imageUrl.startsWith('http') ? imageUrl : `${backendUrl}${imageUrl}`;
+            // No necesitamos construir la URL con backendUrl si imageUrl ya es una URL completa de Supabase
+            const urlParaFetch = imageUrl;
 
-            const response = await fetch(urlCompletaParaFetch); 
-            if (!response.ok) { /* ... tu manejo de error ... */ }
+            const response = await fetch(urlParaFetch);
+            if (!response.ok) {
+                console.error("Error al descargar imagen, respuesta no OK:", response.status, response.statusText);
+                establecerError(idioma === 'es' ? `Error descargando imagen: ${response.status}` : `Error downloading image: ${response.status}`);
+                return;
+            }
             const blob = await response.blob();
             const urlObjeto = window.URL.createObjectURL(blob);
 
@@ -160,13 +163,14 @@ const Chat = ({
             document.body.removeChild(link);
             window.URL.revokeObjectURL(urlObjeto);
 
-        } catch (error) { 
-            console.log("Error al descargar la imagen:", error);
+        } catch (error) {
+            console.error("Error en manejarDescargaImagen:", error);
+            establecerError(idioma === 'es' ? "Error al procesar descarga de imagen." : "Error processing image download.");
          }
     };
 
-    // **** MODIFICACIÓN CLAVE: enviarMensajeYGenerarRespuesta ****
     const enviarMensajeYGenerarRespuesta = async (e) => {
+        // ... (resto de la función sin cambios)
         if (e) e.preventDefault();
         if (cargando) return;
 
@@ -189,26 +193,23 @@ const Chat = ({
             
             establecerCargando(true); establecerError("");
             let currentConversationId = idConversacionActiva;
-            let mensajeUsuarioTemporalId = Date.now() + '_cmd'; // ID temporal para el comando
+            let mensajeUsuarioTemporalId = Date.now() + '_cmd'; 
 
-            // Paso 1: Mostrar el comando del usuario inmediatamente
             const comandoUsuarioMsg = { id: mensajeUsuarioTemporalId, role: "user", text: promptActual, date: new Date(), esError: false, isImage: false };
             establecerConversacion(prev => [...prev, comandoUsuarioMsg]);
-            establecerPrompt(""); // Limpiar input después de añadir el mensaje del usuario
+            establecerPrompt(""); 
             requestAnimationFrame(() => { if (refAreaTexto.current) refAreaTexto.current.style.height = 'auto'; desplazarHaciaAbajo(); });
 
             try {
-                // Paso 2: Si no hay ID de conversación, crear una nueva primero
                 if (!currentConversationId) {
                     console.log("[Chat] Creando nueva conversación para /imagen...");
-                    // Usar /api/generateText para crear la conversación, el backend lo manejará
                     const formDataNuevaConv = new FormData();
-                    formDataNuevaConv.append("prompt", `Nueva conversación para imagen: ${promptParaBackend.substring(0, 30)}...`); // Un prompt para el título
+                    formDataNuevaConv.append("prompt", `Nueva conversación para imagen: ${promptParaBackend.substring(0, 30)}...`);
                     formDataNuevaConv.append("modeloSeleccionado", modeloSeleccionado);
                     formDataNuevaConv.append("temperatura", temperatura.toString());
                     formDataNuevaConv.append("topP", topP.toString());
                     formDataNuevaConv.append("idioma", idioma);
-                    formDataNuevaConv.append("archivosSeleccionados", JSON.stringify([])); // Sin archivos para esto
+                    formDataNuevaConv.append("archivosSeleccionados", JSON.stringify([]));
 
                     const respNuevaConv = await fetch(`${backendUrl}/api/generateText`, {
                         method: "POST", body: formDataNuevaConv, credentials: 'include'
@@ -219,17 +220,12 @@ const Chat = ({
                         throw new Error(datosNuevaConv.error || 'Error creando conversación para la imagen.');
                     }
                     currentConversationId = datosNuevaConv.conversationId;
-                    establecerIdConversacionActiva(currentConversationId); // Actualizar ID global
-                    // La respuesta de generateText (el resumen) se añade a la conversación
-                    // Esto puede ser bueno para tener un contexto o se puede optar por no mostrarlo.
-                    // Aquí se muestra como un mensaje del modelo.
+                    establecerIdConversacionActiva(currentConversationId);
                     const msgResumenConv = { id: Date.now() + '_sum', role: "model", text: datosNuevaConv.respuesta, date: new Date(), esError: false, isImage: false };
                     establecerConversacion(prev => [...prev, msgResumenConv]);
-
                     if (typeof refrescarHistorial === 'function') setTimeout(() => refrescarHistorial(), 200);
                 }
 
-                // Paso 3: Generar la imagen usando el ID de conversación
                 console.log(`[Chat] Generando imagen con prompt "${promptParaBackend}" en Conv ID ${currentConversationId}`);
                 const respuestaApiImagen = await fetch(`${backendUrl}/api/generateImage`, {
                     method: "POST", headers: { "Content-Type": "application/json" }, credentials: 'include',
@@ -239,14 +235,14 @@ const Chat = ({
                 if (!respuestaApiImagen.ok) throw new Error(datosApiImagenResult.error || `Error ${respuestaApiImagen.status} generando imagen`);
                 
                 const mensajeBotConImagen = {
-                    id: datosApiImagenResult.messageId || Date.now() + '_img', // Usar ID del backend si existe
+                    id: datosApiImagenResult.messageId || Date.now() + '_img',
                     role: "model",
                     text: datosApiImagenResult.message || (idioma === 'es' ? `Imagen generada` : `Image generated`),
                     imageUrl: datosApiImagenResult.imageUrl,
                     fileName: datosApiImagenResult.fileName,
                     isImage: true,
                     date: new Date(),
-                    esError: false,
+                    esError: !!datosApiImagenResult.errorDB, // Considerar errorDB para marcar como error
                 };
                 establecerConversacion(prev => [...prev, mensajeBotConImagen]);
 
@@ -254,14 +250,13 @@ const Chat = ({
                 const errorMsg = err.message || (idioma === 'es' ? 'Error al generar imagen.' : 'Error generating image.');
                 const mensajeErrorImg = { id: Date.now() + '_err_img', role: "model", text: errorMsg, esError: true, date: new Date(), isImage: false };
                 establecerConversacion(prev => [...prev, mensajeErrorImg]);
-                establecerError(errorMsg); // Mostrar error en UI
+                establecerError(errorMsg);
             } finally {
                 establecerCargando(false); desplazarHaciaAbajo();
             }
             return; 
         }
 
-        // Lógica para mensajes de texto (mayormente sin cambios, pero asegurar consistencia)
         if ( !promptActual && archivosNuevosActuales.length === 0 && archivosSeleccionadosActuales.length === 0 ) {
             establecerError(idioma === 'en' ? "Please write a message or select/upload at least one PDF file." : "Por favor, escribe un mensaje o selecciona/sube al menos un archivo PDF.");
             return;
@@ -290,21 +285,21 @@ const Chat = ({
                 method: "POST", body: formData, credentials: 'include'
             });
             const datosApiTexto = await respuestaApiTexto.json();
-            if (!respuestaApiTexto.ok) throw new Error(datosApiTexto.error || `Error ${respuestaApiTexto.status} generando texto`);
-            
-            const esErrorIa = !datosApiTexto.respuesta || 
-                              datosApiTexto.respuesta.toLowerCase().includes("lo siento") || 
-                              datosApiTexto.respuesta.toLowerCase().includes("i'm sorry") ||
-                              datosApiTexto.respuesta.toLowerCase().includes("error");
 
-            const mensajeBotTexto = { 
-                id: datosApiTexto.messageId || Date.now() + '_model', // Usar ID del backend si existe
-                role: "model", 
-                text: datosApiTexto.respuesta, 
-                date: new Date(), 
-                esError: esErrorIa,
-                isImage: false // Confirmar que esto no es una imagen
-            };
+            // Revisar si hubo errores de subida de PDF parciales devueltos por el backend
+            if (datosApiTexto.uploadErrors && datosApiTexto.uploadErrors.length > 0) {
+                const errorFilesMsg = idioma === 'es' ? "Algunos PDFs no pudieron ser procesados: " : "Some PDFs could not be processed: ";
+                const fileErrorsString = datosApiTexto.uploadErrors.map(err => `${err.originalName} (${err.error})`).join(', ');
+                establecerError(errorFilesMsg + fileErrorsString); // Mostrar error de subida parcial
+                 // Considera si quieres añadir un mensaje de error a la conversación también
+            }
+
+            if (!respuestaApiTexto.ok && !datosApiTexto.respuesta) { // Error general si no hay respuesta
+                throw new Error(datosApiTexto.error || `Error ${respuestaApiTexto.status} generando texto`);
+            }
+            
+            const esErrorIa = !datosApiTexto.respuesta || datosApiTexto.respuesta.toLowerCase().includes("lo siento") || datosApiTexto.respuesta.toLowerCase().includes("i'm sorry") || datosApiTexto.respuesta.toLowerCase().includes("error");
+            const mensajeBotTexto = { id: datosApiTexto.messageId || Date.now() + '_model', role: "model", text: datosApiTexto.respuesta || (datosApiTexto.error || ""), date: new Date(), esError: esErrorIa || !!datosApiTexto.error, isImage: false };
             establecerConversacion([...conversacionConUsuario, mensajeBotTexto]);
 
             if (datosApiTexto.isNewConversation && datosApiTexto.conversationId) {
@@ -323,21 +318,15 @@ const Chat = ({
             establecerCargando(false); desplazarHaciaAbajo();
         }
     };
-    // **** FIN DE MODIFICACIÓN CLAVE ****
 
     const manejarCambioModelo = (evento) => { establecerModeloSeleccionado(evento.target.value); };
     const manejarTeclaAbajo = (e) => {
          if (e.key === 'Enter' && !e.shiftKey && !cargando) {
              e.preventDefault();
-              const promptActualTrimmed = prompt.trim(); // Usar una variable local para evitar múltiples trim()
+              const promptActualTrimmed = prompt.trim();
               const archivosSeleccionadosActuales = listaArchivosUsuario.filter(f => f.seleccionado && !f.esNuevo);
               const archivosNuevosActuales = archivosPdfNuevos;
-              // La condición para enviar incluye el prompt, si es comando de imagen, o si hay archivos
-              if (promptActualTrimmed || 
-                  (promptActualTrimmed.toLowerCase().startsWith("/imagen ") || promptActualTrimmed.toLowerCase().startsWith("/image ")) || 
-                  archivosNuevosActuales.length > 0 || 
-                  archivosSeleccionadosActuales.length > 0
-              ) {
+              if (promptActualTrimmed || (promptActualTrimmed.toLowerCase().startsWith("/imagen ") || promptActualTrimmed.toLowerCase().startsWith("/image ")) || archivosNuevosActuales.length > 0 || archivosSeleccionadosActuales.length > 0) {
                  enviarMensajeYGenerarRespuesta(null);
              }
          }
@@ -348,6 +337,7 @@ const Chat = ({
     return (
         <div className="flex flex-col flex-1 max-h-screen bg-surface text-primary">
             <div className="relative flex items-center justify-between flex-shrink-0 p-3 border-b border-divider">
+                {/* ... (Header sin cambios) ... */}
                 <button onClick={toggleMobileMenu} className="p-1.5 rounded-md text-secondary hover:text-primary hover:bg-hover-item md:hidden" title={idioma === 'en' ? 'Open menu' : 'Abrir menú'} aria-label={idioma === 'en' ? 'Open menu' : 'Abrir menú'} > <IconoMenu /> </button>
                  <div className="flex flex-col items-center text-center flex-grow min-w-0 px-2">
                      <h1 className="text-lg font-semibold truncate text-primary w-full"> <a href="https://united-its.com/" target="_blank" rel="noopener noreferrer" className="transition-colors text-link hover:underline"> Asistencia United ITS </a> </h1>
@@ -373,16 +363,24 @@ const Chat = ({
                      {!Array.isArray(conversacion) || conversacion.length === 0 && !cargando ? (
                          <p className="pt-4 text-sm text-center text-muted">{idioma === 'en' ? 'Start the conversation...' : 'Inicia la conversación...'}</p>
                      ) : (
-                         Array.isArray(conversacion) && conversacion.map((mensaje) => { // Quitar el `index` si `mensaje.id` es único
+                         Array.isArray(conversacion) && conversacion.map((mensaje) => {
                             if (!mensaje || typeof mensaje.role === 'undefined' || typeof mensaje.id === 'undefined') {
                                 console.warn("Mensaje inválido o sin ID:", mensaje);
                                 return null;
                             }
+                            // AÑADIDO LOG DE DEPURACIÓN PARA IMÁGENES
+                            if (mensaje.isImage) {
+                                console.log("CHAT.JSX - DEBUG IMAGEN:");
+                                console.log("  ID Mensaje:", mensaje.id);
+                                console.log("  Image URL (para src):", mensaje.imageUrl);
+                                console.log("  File Name:", mensaje.fileName);
+                              }
+
                             const esMensajeUsuario = mensaje.role === "user";
                             const esMensajeModelo = mensaje.role === "model";
 
                             return (
-                                <div key={mensaje.id} className={`group flex items-start ${esMensajeUsuario ? "justify-end" : "justify-start"}`}> {/* Usar mensaje.id como key */}
+                                <div key={mensaje.id} className={`group flex items-start ${esMensajeUsuario ? "justify-end" : "justify-start"}`}>
                                     {esMensajeModelo && !mensaje.esError && !mensaje.isImage && ( <div className="pt-1 mr-2 text-xl flex-shrink-0 self-start text-accent">🤖</div> )}
                                     {esMensajeModelo && mensaje.isImage && !mensaje.esError && ( <div className="pt-1 mr-2 text-xl flex-shrink-0 self-start text-accent">🖼️</div> )}
                                     {esMensajeModelo && mensaje.esError && ( <div className="pt-1 mr-2 text-xl flex-shrink-0 self-start text-error">⚠️</div> )}
@@ -399,15 +397,18 @@ const Chat = ({
                                                     {mensaje.text && mensaje.text.trim() && <p className="mb-1 text-xs italic text-muted">{mensaje.text}</p>}
                                                     <div className="relative">
                                                         <img
-                                                            src={mensaje.imageUrl.startsWith('data:') ? mensaje.imageUrl : (mensaje.imageUrl.startsWith('http') ? mensaje.imageUrl : `${backendUrl}${mensaje.imageUrl}`)}
+                                                            src={mensaje.imageUrl} // Usar directamente la URL de Supabase
                                                             alt={mensaje.fileName || "Imagen generada"}
                                                             className="max-w-full h-auto rounded-md block"
                                                             onLoad={desplazarHaciaAbajo}
-                                                            onError={(e) => { 
-                                                                e.target.onerror = null; 
+                                                            onError={(e) => {
+                                                                console.error("CHAT.JSX - ERROR AL CARGAR IMAGEN DESDE SRC:", e.target.src, e);
+                                                                e.target.onerror = null;
+                                                                // Podrías poner una imagen placeholder aquí
+                                                                // e.target.src = "/imagen-no-disponible.png";
                                                              }}
                                                         />
-                                                        <button onClick={() => manejarDescargaImagen( mensaje.imageUrl.startsWith('data:') ? mensaje.imageUrl : (mensaje.imageUrl.startsWith('http') ? mensaje.imageUrl : `${backendUrl}${mensaje.imageUrl}`), mensaje.fileName )} className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity hover:bg-opacity-70" title={idioma === 'es' ? 'Descargar imagen' : 'Download image'} aria-label={idioma === 'es' ? 'Descargar imagen' : 'Download image'}>
+                                                        <button onClick={() => manejarDescargaImagen(mensaje.imageUrl, mensaje.fileName )} className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity hover:bg-opacity-70" title={idioma === 'es' ? 'Descargar imagen' : 'Download image'} aria-label={idioma === 'es' ? 'Descargar imagen' : 'Download image'}>
                                                             <IconoDescargar /> </button>
                                                     </div>
                                                 </div>
@@ -416,7 +417,10 @@ const Chat = ({
                                                     <ReactMarkdown 
                                                         rehypePlugins={[rehypeRaw]} 
                                                         remarkPlugins={[remarkGfm]} 
-                                                        components={{  /* ... tus componentes de Markdown ... */  }} 
+                                                        components={{
+                                                            // Personaliza componentes si es necesario
+                                                            // ej: p: ({node, ...props}) => <p className="mb-2" {...props} />,
+                                                         }} 
                                                     >
                                                         {mensaje.text || ""}
                                                     </ReactMarkdown>
@@ -436,7 +440,8 @@ const Chat = ({
              </div>
 
             {/* Formulario de Envío */}
-             <form onSubmit={enviarMensajeYGenerarRespuesta} className="flex items-end flex-shrink-0 gap-2 p-3 border-t border-divider bg-surface">
+            <form onSubmit={enviarMensajeYGenerarRespuesta} className="flex items-end flex-shrink-0 gap-2 p-3 border-t border-divider bg-surface">
+                {/* ... (Formulario sin cambios) ... */}
                  <div className="flex-shrink-0 self-end">
                       <input type="file" accept=".pdf" multiple onChange={manejarCambioArchivoInput} disabled={cargando} className="hidden" id="inputArchivoPdf" />
                       <label htmlFor="inputArchivoPdf" title={conteoArchivosMostrados > 0 ? `${conteoArchivosMostrados} ${idioma === 'es' ? 'archivo(s)' : 'file(s)'}` : (idioma === 'es' ? 'Seleccionar PDF' : 'Select PDF')} className={`relative cursor-pointer p-2.5 rounded-lg transition-all inline-block text-secondary ${ cargando ? 'bg-input opacity-50 cursor-not-allowed' : 'bg-button-secondary hover:bg-button-secondary-hover' }`} aria-disabled={cargando} >
