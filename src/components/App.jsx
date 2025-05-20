@@ -1,5 +1,3 @@
-// --- START OF FILE App.jsx ---
-
 import React, { useState, useEffect, useCallback } from "react";
 import Chat from "./Chat";
 import Historial from "./Historial";
@@ -33,7 +31,7 @@ export const App = () => {
 
     const [panelLateralAbierto, setPanelLateralAbierto] = useState(true);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const [leerEnVozAltaActivado, setLeerEnVozAltaActivado] = useState(false); // setLeerEnVozAltaActivado es usado en handleKeyDown
+    const [leerEnVozAltaActivado, setLeerEnVozAltaActivado] = useState(false);
 
     const [temperatura, setTemperatura] = useState(() => {
       const val = localStorage.getItem("ajustes_temperatura");
@@ -62,7 +60,19 @@ export const App = () => {
         setIdConversacionActiva(null);
     }, []);
 
-    // El ESLint warning sobre BACKEND_BASE_URL aquí fue eliminado de la dependencia.
+    const manejarLogout = useCallback(async () => {
+        console.log("[App] Iniciando Logout...");
+        try {
+            await fetch(`${BACKEND_BASE_URL}/api/logout`, { method: 'POST', credentials: 'include' });
+        } catch (error) { console.error("[Logout] Error fetch:", error); }
+        finally {
+            console.log("[App] Finalizando Logout: limpiando estado local.");
+            setIsAuthenticated(false);
+            setCurrentUser(null);
+            setIsMobileMenuOpen(false);
+        }
+    }, []);
+
     const verificarAutenticacionYActualizarUsuario = useCallback(async (forzarLimpieza = false) => {
         console.log(`[App Auth] Verificando autenticación. Forzar limpieza: ${forzarLimpieza}`);
         setIsLoadingAuth(true);
@@ -79,8 +89,6 @@ export const App = () => {
                 const datos = await respuesta.json();
                 console.log("[App Auth] Verificado, usuario:", datos.user.username);
                 if (!currentUser || previousUserId !== datos.user.id || forzarLimpieza) {
-                    console.log("[App Auth] Nuevo usuario o limpieza forzada. Limpiando datos si es necesario antes de setear.");
-                    // Solo limpiar si NO se forzó ya Y el usuario es realmente diferente o es primera vez con este usuario.
                     if (!forzarLimpieza && (!previousUserId || previousUserId !== datos.user.id) ) {
                         limpiarTodosLosDatosDeUsuario();
                     }
@@ -92,6 +100,7 @@ export const App = () => {
                 if (isAuthenticated || currentUser) limpiarTodosLosDatosDeUsuario();
                 setIsAuthenticated(false);
                 setCurrentUser(null);
+                if (respuesta.status === 401 || respuesta.status === 403) manejarLogout();
             }
         } catch (error) {
             console.error("[App Auth] Error fetch:", error);
@@ -101,45 +110,42 @@ export const App = () => {
         } finally {
             setIsLoadingAuth(false);
         }
-    }, [currentUser, limpiarTodosLosDatosDeUsuario, isAuthenticated]); // isAuthenticated añadida para condición de limpieza
+    }, [currentUser, limpiarTodosLosDatosDeUsuario, isAuthenticated, manejarLogout]);
 
 
     useEffect(() => {
         verificarAutenticacionYActualizarUsuario();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Este SOLO se ejecuta al montar. Cambios por login/logout manejan su propia llamada.
-
-    const manejarLogout = useCallback(async () => {
-        console.log("[App] Iniciando Logout...");
-        try {
-            await fetch(`${BACKEND_BASE_URL}/api/logout`, { method: 'POST', credentials: 'include' });
-        } catch (error) { console.error("[Logout] Error fetch:", error); }
-        finally {
-            console.log("[App] Finalizando Logout: limpiando estado local.");
-            setIsAuthenticated(false);
-            setCurrentUser(null);
-            // limpiarTodosLosDatosDeUsuario(); // Ahora se activa por el useEffect de abajo
-            setIsMobileMenuOpen(false);
-        }
     }, []);
 
-    // Efecto para cargar los datos específicos del usuario
+    const cargarHistorialConversaciones = useCallback(async () => {
+        if (isAuthenticated && currentUser) {
+            console.log(`[App Data] Recargando historial de conversaciones para ${currentUser.username}`);
+            try {
+                const convRes = await fetch(`${BACKEND_BASE_URL}/api/conversations`, { credentials: 'include' });
+                if (convRes.ok) {
+                    const nuevasConversaciones = await convRes.json().then(d => Array.isArray(d) ? d.map(c => ({ id: c.id, titulo: c.titulo })) : []);
+                    setHistorialConversaciones(nuevasConversaciones);
+                    console.log("[App Data] Historial de conversaciones recargado.", nuevasConversaciones);
+                } else {
+                    console.error("[App Data] Error recargando conversaciones:", convRes.status);
+                    if(convRes.status === 401 || convRes.status === 403) manejarLogout();
+                }
+            } catch (error) {
+                console.error("[App Data] Excepción en fetch al recargar conversaciones:", error);
+            }
+        }
+    }, [isAuthenticated, currentUser, manejarLogout]);
+
+
     useEffect(() => {
         const cargarDatosDelUsuarioActual = async () => {
             if (isAuthenticated && currentUser) {
-                console.log(`[App Data] Cargando datos para ${currentUser.username}`);
+                console.log(`[App Data] Cargando datos iniciales para ${currentUser.username}`);
                 try {
-                    const [convRes, filesRes] = await Promise.all([
-                         fetch(`${BACKEND_BASE_URL}/api/conversations`, { credentials: 'include' }),
-                         fetch(`${BACKEND_BASE_URL}/api/files`, { credentials: 'include' })
-                    ]);
-                    if (convRes.ok) {
-                        setHistorialConversaciones(await convRes.json().then(d => Array.isArray(d) ? d.map(c=>({id:c.id, titulo:c.titulo})) : []));
-                    } else {
-                        console.error("[App Data] Error cargando conversaciones:", convRes.status);
-                        setHistorialConversaciones([]);
-                        if(convRes.status === 401 || convRes.status === 403) manejarLogout();
-                    }
+                    await cargarHistorialConversaciones(); 
+                    
+                    const filesRes = await fetch(`${BACKEND_BASE_URL}/api/files`, { credentials: 'include' });
                     if (filesRes.ok) {
                         setListaArchivosUsuario(await filesRes.json().then(d => Array.isArray(d) ? d.map(f=>({name:f.name, displayName:f.originalName, seleccionado:false, esNuevo:false})) : []));
                     } else {
@@ -147,21 +153,22 @@ export const App = () => {
                         setListaArchivosUsuario([]);
                         if(filesRes.status === 401 || filesRes.status === 403) manejarLogout();
                     }
-                } catch (error) { console.error("[App Data] Excepción en fetch:", error); }
+                } catch (error) { console.error("[App Data] Excepción en fetch de datos iniciales:", error); }
             } else if (!isAuthenticated) {
-                // Si explícitamente no estamos autenticados, asegurar que todo esté limpio.
                 limpiarTodosLosDatosDeUsuario();
             }
         };
         cargarDatosDelUsuarioActual();
-    }, [isAuthenticated, currentUser, limpiarTodosLosDatosDeUsuario, manejarLogout]); // manejarLogout AÑADIDO como dependencia
-
+    // eslint-disable-next-line react-hooks/exhaustive-deps 
+    }, [isAuthenticated, currentUser, limpiarTodosLosDatosDeUsuario, cargarHistorialConversaciones]); // Se añade cargarHistorialConversaciones aquí
+                                                                                                   // para que se ejecute si la función en sí misma cambia
+                                                                                                   // (aunque es estable con useCallback, es una buena práctica).
+                                                                                                   // No debería causar bucles infinitos si las dependencias de
+                                                                                                   // cargarHistorialConversaciones están bien gestionadas.
 
     const handleLoginSuccess = useCallback(() => {
-        console.log("[App] Login detectado, forzando reverificación y limpieza previa.");
-        verificarAutenticacionYActualizarUsuario(true); // El 'true' fuerza la limpieza antes de setear el nuevo user
+        verificarAutenticacionYActualizarUsuario(true);
     }, [verificarAutenticacionYActualizarUsuario]);
-
 
     const seleccionarConversacionActiva = useCallback(async (convId) => {
         if (convId === null) { setMensajesConversacionActiva([]); setIdConversacionActiva(null); return; }
@@ -169,32 +176,47 @@ export const App = () => {
         console.log(`[App] Seleccionando conversación ${convId}`);
         try {
             const respuesta = await fetch(`${BACKEND_BASE_URL}/api/conversations/${convId}/messages`, { credentials: 'include' });
-            if (!respuesta.ok) { const errorData = await respuesta.json().catch(() => ({ error: `Error ${respuesta.status}` })); console.error("[App] Error API cargando mensajes:", errorData.error); setMensajesConversacionActiva([]); setIdConversacionActiva(convId); throw new Error(errorData.error || `Error ${respuesta.status} cargando mensajes`); }
+            if (!respuesta.ok) { 
+                const errorData = await respuesta.json().catch(() => ({ error: `Error ${respuesta.status}` })); 
+                setMensajesConversacionActiva([]); 
+                setIdConversacionActiva(convId); 
+                throw new Error(errorData.error || `Error ${respuesta.status} cargando mensajes`); 
+            }
             const mensajesApi = await respuesta.json();
-            if (!Array.isArray(mensajesApi)) { console.error("[App] Formato de mensajes inválido", mensajesApi); setMensajesConversacionActiva([]); setIdConversacionActiva(convId); throw new Error("Formato de mensajes de la conversación inválido."); }
-            const mensajesFormateados = mensajesApi.map(msg => ({ id: msg.id, role: msg.rol === 'user' ? 'user' : 'model', text: msg.tipo_mensaje === 'image' ? (msg.texto.includes('Error') || msg.texto === `${BACKEND_BASE_URL}${msg.texto}` ? '' : msg.texto.substring(msg.texto.lastIndexOf('/') + 1).replace(/[-_]/g, ' ').replace(/\.[^/.]+$/, "")) : msg.texto || '', imageUrl: msg.tipo_mensaje === 'image' ? msg.texto : null, fileName: msg.tipo_mensaje === 'image' ? (msg.texto.substring(msg.texto.lastIndexOf('/') + 1)) : null, isImage: msg.tipo_mensaje === 'image', date: msg.fecha_envio ? new Date(msg.fecha_envio) : new Date(), esError: !!msg.es_error, }));
+            if (!Array.isArray(mensajesApi)) {
+                console.error("[App] Formato de mensajes inválido", mensajesApi); 
+                setMensajesConversacionActiva([]); 
+                setIdConversacionActiva(convId);
+                throw new Error("Formato de mensajes de la conversación inválido."); 
+            }
+            const mensajesFormateados = mensajesApi.map(msg => ({ 
+                id: msg.id, 
+                role: msg.rol === 'user' ? 'user' : 'model', 
+                text: msg.tipo_mensaje === 'image' ? (msg.texto.includes('Error') || msg.texto === `${BACKEND_BASE_URL}${msg.texto}` ? '' : msg.texto.substring(msg.texto.lastIndexOf('/') + 1).replace(/[-_]/g, ' ').replace(/\.[^/.]+$/, "")) : msg.texto || '', 
+                imageUrl: msg.tipo_mensaje === 'image' ? msg.texto : null, 
+                fileName: msg.tipo_mensaje === 'image' ? (msg.texto.substring(msg.texto.lastIndexOf('/') + 1)) : null, 
+                isImage: msg.tipo_mensaje === 'image', 
+                date: msg.fecha_envio ? new Date(msg.fecha_envio) : new Date(), 
+                esError: !!msg.es_error, 
+            }));
             setMensajesConversacionActiva(mensajesFormateados);
             setIdConversacionActiva(convId);
         } catch (error) { console.error("[App] Error seleccionando conversación activa:", error); throw error; }
-    }, []); // Eliminado BACKEND_BASE_URL de las dependencias
-
-    const seleccionarArchivo = useCallback((nombreArchivoSeleccionado) => { // nombre SÍ se usa
-        setListaArchivosUsuario(prev =>
-            prev.map(a =>
-                a.name === nombreArchivoSeleccionado ? { ...a, seleccionado: !a.seleccionado } : a
-            )
-        );
     }, []);
 
-    const manejarCambioInputArchivo = useCallback((event) => { // event SÍ se usa
+    const seleccionarArchivo = useCallback((nombreArchivoSeleccionado) => {
+        setListaArchivosUsuario(prev => prev.map(a => a.name === nombreArchivoSeleccionado ? { ...a, seleccionado: !a.seleccionado } : a));
+    }, []);
+
+    const manejarCambioInputArchivo = useCallback((event) => {
         const files = Array.from(event.target.files || []);
         if (files.length > 0) {
             const pdfs = files.filter(f => f.type === 'application/pdf');
-            if (pdfs.length !== files.length) alert(idioma === 'es' ? "Only PDF files allowed." : "Solo PDF.");
+            if (pdfs.length !== files.length) alert(idioma === 'es' ? "Solo PDF." : "Only PDF files allowed.");
             setArchivosPdfNuevos(pdfs);
         } else setArchivosPdfNuevos([]);
         if (event.target) event.target.value = null;
-    }, [idioma]); // idioma se usa para el alert, dejarlo es correcto si se quiere ese comportamiento
+    }, [idioma]);
 
     const refrescarArchivos = useCallback(async (preservarSelecciones = true) => {
         if (!isAuthenticated || !currentUser) return;
@@ -204,9 +226,12 @@ export const App = () => {
             if (res.ok) {
                 const datos = await res.json();
                 setListaArchivosUsuario(Array.isArray(datos) ? datos.map(f=>({name:f.name, displayName:f.originalName, seleccionado: !!seleccionados.get(f.name), esNuevo:false})) : []);
-            } else { if (res.status === 401 || res.status === 403) await verificarAutenticacionYActualizarUsuario(true); else console.error("[Refresh Files] Error:", res.status); }
+            } else { 
+                if (res.status === 401 || res.status === 403) verificarAutenticacionYActualizarUsuario(true); 
+                else console.error("[Refresh Files] Error:", res.status); 
+            }
         } catch (err) { console.error("[Refresh Files] Error fetch:", err); }
-    }, [isAuthenticated, currentUser, listaArchivosUsuario, verificarAutenticacionYActualizarUsuario]); // Eliminado BACKEND_BASE_URL
+    }, [isAuthenticated, currentUser, listaArchivosUsuario, verificarAutenticacionYActualizarUsuario]);
 
 
     const limpiarNuevosPdfsYRefrescar = useCallback(async () => {
@@ -219,9 +244,9 @@ export const App = () => {
         if (!event?.key) return;
         if (event.key === 'Escape' && isMobileMenuOpen) { toggleMobileMenu(); return; }
         if (event.key.toLowerCase() === 'f' && !(document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement)) {
-            event.preventDefault(); setLeerEnVozAltaActivado(prev => !prev); // setLeerEnVozAltaActivado se usa aquí
+            event.preventDefault(); setLeerEnVozAltaActivado(prev => !prev);
         }
-    }, [isMobileMenuOpen, toggleMobileMenu]); // setLeerEnVozAltaActivado es un setter, estable
+    }, [isMobileMenuOpen, toggleMobileMenu]);
 
      useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);
@@ -273,7 +298,7 @@ export const App = () => {
                 limpiarArchivosPdfNuevosYRefrescar={limpiarNuevosPdfsYRefrescar}
                 idConversacionActiva={idConversacionActiva} establecerIdConversacionActiva={setIdConversacionActiva}
                 temperatura={temperatura} topP={topP} idioma={idioma}
-                refrescarHistorial={() => { if(isAuthenticated && currentUser) { /* El effect de arriba se encarga de cargar */ console.log("Intento de refrescar historial desde Chat.jsx") } }}
+                refrescarHistorial={cargarHistorialConversaciones} // <--- SE PASA LA FUNCIÓN CORRECTA
                 leerEnVozAltaActivado={leerEnVozAltaActivado}
                 toggleMobileMenu={toggleMobileMenu}
                 backendUrl={BACKEND_BASE_URL}
@@ -282,4 +307,3 @@ export const App = () => {
     );
 };
 export default App;
-// --- END OF FILE App.jsx ---

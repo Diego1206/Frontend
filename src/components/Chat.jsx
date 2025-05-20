@@ -1,5 +1,3 @@
-// --- START OF FILE Chat.jsx ---
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -32,7 +30,7 @@ const Chat = ({
     temperatura,
     topP,
     idioma,
-    refrescarHistorial,
+    refrescarHistorial, // Esta prop ahora es cargarHistorialConversaciones de App.jsx
     leerEnVozAltaActivado,
     toggleMobileMenu,
     backendUrl
@@ -103,7 +101,7 @@ const Chat = ({
                 } else { return; }
             }
             const timerId = setTimeout(() => {
-                 const convActualizadaParaTTS = refConversacionActualParaTTS.current; // Re-check
+                 const convActualizadaParaTTS = refConversacionActualParaTTS.current; 
                  if (convActualizadaParaTTS && convActualizadaParaTTS.length > 0 && convActualizadaParaTTS[convActualizadaParaTTS.length - 1] === ultimoMensaje) {
                      console.log("[TTS Auto] Leyendo ID:", ultimoMensaje.id, ultimoMensaje.text.substring(0,30) + "...");
                      manejarHablarDetener(ultimoMensaje.text, ultimoMensaje.id);
@@ -142,8 +140,6 @@ const Chat = ({
         }
         try {
             const nombrePorDefecto = fileName || `imagen_generada_${Date.now()}.png`;
-            
-            // No necesitamos construir la URL con backendUrl si imageUrl ya es una URL completa de Supabase
             const urlParaFetch = imageUrl;
 
             const response = await fetch(urlParaFetch);
@@ -170,7 +166,6 @@ const Chat = ({
     };
 
     const enviarMensajeYGenerarRespuesta = async (e) => {
-        // ... (resto de la función sin cambios)
         if (e) e.preventDefault();
         if (cargando) return;
 
@@ -193,9 +188,7 @@ const Chat = ({
             
             establecerCargando(true); establecerError("");
             let currentConversationId = idConversacionActiva;
-            let mensajeUsuarioTemporalId = Date.now() + '_cmd'; 
-
-            const comandoUsuarioMsg = { id: mensajeUsuarioTemporalId, role: "user", text: promptActual, date: new Date(), esError: false, isImage: false };
+            const comandoUsuarioMsg = { id: Date.now() + '_cmd', role: "user", text: promptActual, date: new Date(), esError: false, isImage: false };
             establecerConversacion(prev => [...prev, comandoUsuarioMsg]);
             establecerPrompt(""); 
             requestAnimationFrame(() => { if (refAreaTexto.current) refAreaTexto.current.style.height = 'auto'; desplazarHaciaAbajo(); });
@@ -210,6 +203,8 @@ const Chat = ({
                     formDataNuevaConv.append("topP", topP.toString());
                     formDataNuevaConv.append("idioma", idioma);
                     formDataNuevaConv.append("archivosSeleccionados", JSON.stringify([]));
+                     try { const tz = Intl.DateTimeFormat().resolvedOptions().timeZone; if (tz) formDataNuevaConv.append("clientTimeZone", tz); } catch{console.warn("No se pudo obtener clientTimeZone para conv de imagen")}
+
 
                     const respNuevaConv = await fetch(`${backendUrl}/api/generateText`, {
                         method: "POST", body: formDataNuevaConv, credentials: 'include'
@@ -221,9 +216,11 @@ const Chat = ({
                     }
                     currentConversationId = datosNuevaConv.conversationId;
                     establecerIdConversacionActiva(currentConversationId);
-                    const msgResumenConv = { id: Date.now() + '_sum', role: "model", text: datosNuevaConv.respuesta, date: new Date(), esError: false, isImage: false };
-                    establecerConversacion(prev => [...prev, msgResumenConv]);
-                    if (typeof refrescarHistorial === 'function') setTimeout(() => refrescarHistorial(), 200);
+                    if (datosNuevaConv.respuesta && datosNuevaConv.respuesta.trim()) {
+                        const msgResumenConv = { id: Date.now() + '_sum', role: "model", text: datosNuevaConv.respuesta, date: new Date(), esError: false, isImage: false };
+                        establecerConversacion(prev => [...prev, msgResumenConv]);
+                    }
+                    if (typeof refrescarHistorial === 'function') setTimeout(refrescarHistorial, 250); // Ligero aumento del timeout
                 }
 
                 console.log(`[Chat] Generando imagen con prompt "${promptParaBackend}" en Conv ID ${currentConversationId}`);
@@ -242,7 +239,7 @@ const Chat = ({
                     fileName: datosApiImagenResult.fileName,
                     isImage: true,
                     date: new Date(),
-                    esError: !!datosApiImagenResult.errorDB, // Considerar errorDB para marcar como error
+                    esError: !!datosApiImagenResult.errorDB,
                 };
                 establecerConversacion(prev => [...prev, mensajeBotConImagen]);
 
@@ -263,8 +260,7 @@ const Chat = ({
         }
         
         establecerCargando(true); establecerError("");
-        const mensajeUsuarioIdTemporal = Date.now() + '_usr';
-        const mensajeUsuario = { id: mensajeUsuarioIdTemporal, role: "user", text: promptActual, date: new Date(), esError: false, isImage: false };
+        const mensajeUsuario = { id: Date.now() + '_usr', role: "user", text: promptActual, date: new Date(), esError: false, isImage: false };
         const conversacionConUsuario = [...conversacion, mensajeUsuario];
         establecerConversacion(conversacionConUsuario);
         establecerPrompt(""); 
@@ -280,21 +276,24 @@ const Chat = ({
             formData.append("idioma", idioma);
             formData.append("archivosSeleccionados", JSON.stringify(archivosSeleccionadosActuales));
             archivosNuevosActuales.forEach((file) => formData.append("archivosPdf", file, file.name));
+            try {
+                const clientTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                if (clientTimeZone) formData.append("clientTimeZone", clientTimeZone);
+            } catch (tzError) { console.warn("[Chat] No se pudo obtener clientTimeZone:", tzError); }
+
 
             const respuestaApiTexto = await fetch(`${backendUrl}/api/generateText`, {
                 method: "POST", body: formData, credentials: 'include'
             });
             const datosApiTexto = await respuestaApiTexto.json();
 
-            // Revisar si hubo errores de subida de PDF parciales devueltos por el backend
             if (datosApiTexto.uploadErrors && datosApiTexto.uploadErrors.length > 0) {
                 const errorFilesMsg = idioma === 'es' ? "Algunos PDFs no pudieron ser procesados: " : "Some PDFs could not be processed: ";
                 const fileErrorsString = datosApiTexto.uploadErrors.map(err => `${err.originalName} (${err.error})`).join(', ');
-                establecerError(errorFilesMsg + fileErrorsString); // Mostrar error de subida parcial
-                 // Considera si quieres añadir un mensaje de error a la conversación también
+                establecerError(errorFilesMsg + fileErrorsString);
             }
 
-            if (!respuestaApiTexto.ok && !datosApiTexto.respuesta) { // Error general si no hay respuesta
+            if (!respuestaApiTexto.ok && !datosApiTexto.respuesta) {
                 throw new Error(datosApiTexto.error || `Error ${respuestaApiTexto.status} generando texto`);
             }
             
@@ -304,10 +303,10 @@ const Chat = ({
 
             if (datosApiTexto.isNewConversation && datosApiTexto.conversationId) {
                 establecerIdConversacionActiva(datosApiTexto.conversationId);
-                if (typeof refrescarHistorial === 'function') setTimeout(() => refrescarHistorial(), 150);
+                if (typeof refrescarHistorial === 'function') setTimeout(refrescarHistorial, 250); // Ligero aumento del timeout
             }
             if (archivosNuevosActuales.length > 0 && typeof limpiarArchivosPdfNuevosYRefrescar === 'function') {
-                setTimeout(() => limpiarArchivosPdfNuevosYRefrescar(), 150);
+                setTimeout(limpiarArchivosPdfNuevosYRefrescar, 150);
             }
         } catch (err) {
             const errorMsg = err.message || (idioma === 'es' ? 'Error al generar respuesta.' : 'Error generating response.');
@@ -331,13 +330,11 @@ const Chat = ({
              }
          }
     };
-    const obtenerConteoArchivosMostrados = () => (archivosPdfNuevos.length + (Array.isArray(listaArchivosUsuario) ? listaArchivosUsuario.filter(f => f?.seleccionado && !f.esNuevo).length : 0));
-    const conteoArchivosMostrados = obtenerConteoArchivosMostrados();
+    const conteoArchivosMostrados = archivosPdfNuevos.length + (Array.isArray(listaArchivosUsuario) ? listaArchivosUsuario.filter(f => f?.seleccionado && !f.esNuevo).length : 0);
 
     return (
         <div className="flex flex-col flex-1 max-h-screen bg-surface text-primary">
             <div className="relative flex items-center justify-between flex-shrink-0 p-3 border-b border-divider">
-                {/* ... (Header sin cambios) ... */}
                 <button onClick={toggleMobileMenu} className="p-1.5 rounded-md text-secondary hover:text-primary hover:bg-hover-item md:hidden" title={idioma === 'en' ? 'Open menu' : 'Abrir menú'} aria-label={idioma === 'en' ? 'Open menu' : 'Abrir menú'} > <IconoMenu /> </button>
                  <div className="flex flex-col items-center text-center flex-grow min-w-0 px-2">
                      <h1 className="text-lg font-semibold truncate text-primary w-full"> <a href="https://united-its.com/" target="_blank" rel="noopener noreferrer" className="transition-colors text-link hover:underline"> Asistencia United ITS </a> </h1>
@@ -368,12 +365,8 @@ const Chat = ({
                                 console.warn("Mensaje inválido o sin ID:", mensaje);
                                 return null;
                             }
-                            // AÑADIDO LOG DE DEPURACIÓN PARA IMÁGENES
                             if (mensaje.isImage) {
-                                console.log("CHAT.JSX - DEBUG IMAGEN:");
-                                console.log("  ID Mensaje:", mensaje.id);
-                                console.log("  Image URL (para src):", mensaje.imageUrl);
-                                console.log("  File Name:", mensaje.fileName);
+                                console.log("CHAT.JSX - DEBUG IMAGEN: ID:", mensaje.id, "URL:", mensaje.imageUrl, "File:", mensaje.fileName);
                               }
 
                             const esMensajeUsuario = mensaje.role === "user";
@@ -397,15 +390,13 @@ const Chat = ({
                                                     {mensaje.text && mensaje.text.trim() && <p className="mb-1 text-xs italic text-muted">{mensaje.text}</p>}
                                                     <div className="relative">
                                                         <img
-                                                            src={mensaje.imageUrl} // Usar directamente la URL de Supabase
+                                                            src={mensaje.imageUrl} 
                                                             alt={mensaje.fileName || "Imagen generada"}
                                                             className="max-w-full h-auto rounded-md block"
                                                             onLoad={desplazarHaciaAbajo}
                                                             onError={(e) => {
                                                                 console.error("CHAT.JSX - ERROR AL CARGAR IMAGEN DESDE SRC:", e.target.src, e);
                                                                 e.target.onerror = null;
-                                                                // Podrías poner una imagen placeholder aquí
-                                                                // e.target.src = "/imagen-no-disponible.png";
                                                              }}
                                                         />
                                                         <button onClick={() => manejarDescargaImagen(mensaje.imageUrl, mensaje.fileName )} className="absolute bottom-2 left-2 bg-black bg-opacity-50 text-white p-1.5 rounded-full opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity hover:bg-opacity-70" title={idioma === 'es' ? 'Descargar imagen' : 'Download image'} aria-label={idioma === 'es' ? 'Descargar imagen' : 'Download image'}>
@@ -417,10 +408,6 @@ const Chat = ({
                                                     <ReactMarkdown 
                                                         rehypePlugins={[rehypeRaw]} 
                                                         remarkPlugins={[remarkGfm]} 
-                                                        components={{
-                                                            // Personaliza componentes si es necesario
-                                                            // ej: p: ({node, ...props}) => <p className="mb-2" {...props} />,
-                                                         }} 
                                                     >
                                                         {mensaje.text || ""}
                                                     </ReactMarkdown>
@@ -439,9 +426,7 @@ const Chat = ({
                  </div>
              </div>
 
-            {/* Formulario de Envío */}
             <form onSubmit={enviarMensajeYGenerarRespuesta} className="flex items-end flex-shrink-0 gap-2 p-3 border-t border-divider bg-surface">
-                {/* ... (Formulario sin cambios) ... */}
                  <div className="flex-shrink-0 self-end">
                       <input type="file" accept=".pdf" multiple onChange={manejarCambioArchivoInput} disabled={cargando} className="hidden" id="inputArchivoPdf" />
                       <label htmlFor="inputArchivoPdf" title={conteoArchivosMostrados > 0 ? `${conteoArchivosMostrados} ${idioma === 'es' ? 'archivo(s)' : 'file(s)'}` : (idioma === 'es' ? 'Seleccionar PDF' : 'Select PDF')} className={`relative cursor-pointer p-2.5 rounded-lg transition-all inline-block text-secondary ${ cargando ? 'bg-input opacity-50 cursor-not-allowed' : 'bg-button-secondary hover:bg-button-secondary-hover' }`} aria-disabled={cargando} >
@@ -457,4 +442,3 @@ const Chat = ({
 };
 
 export default Chat;
-// --- END OF FILE Chat.jsx ---
