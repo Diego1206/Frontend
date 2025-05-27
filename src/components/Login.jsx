@@ -1,120 +1,117 @@
 import React, { useState } from 'react';
-import './Login.css';
+import './Login.css'; 
+const Login = ({ onLoginSuccess, backendUrl }) => { 
+    const [registrando, setRegistrando] = useState(false);
+    const [nombreUsuario, setNombreUsuario] = useState('');
+    const [contrasena, setContrasena] = useState('');
+    const [confirmarContrasena, setConfirmarContrasena] = useState('');
+    const [mensajeError, setMensajeError] = useState('');
+    const [mensajeExito, setMensajeExito] = useState('');
+    const [cargando, setCargando] = useState(false);
 
-const Login = ({ onLoginSuccess }) => {
-    const [isRegistering, setIsRegistering] = useState(false);
-    const [username, setUsername] = useState('');
-    const [password, setPassword] = useState('');
-    const [confirmPassword, setConfirmPassword] = useState('');
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
-    const [loading, setLoading] = useState(false);
+    const gestionarEnvio = async (e) => {
+        e.preventDefault();
+        setMensajeError(''); setMensajeExito(''); setCargando(true);
 
-    const handleSubmit = async (e) => {
-         e.preventDefault();
-        setError(''); setSuccess(''); setLoading(true);
-
-        if (isRegistering && password !== confirmPassword) {
-            setError("Las contraseñas no coinciden."); setLoading(false); return;
+        if (registrando && contrasena !== confirmarContrasena) {
+            setMensajeError("Las contraseñas no coinciden."); setCargando(false); return;
         }
 
-      
-        const url = isRegistering ? 'https://chat-backend-y914.onrender.com/api/register' : 'https://chat-backend-y914.onrender.com/api/login';
-        const body = { username, password };
+        const urlDestino = registrando ? `${backendUrl}/api/register` : `${backendUrl}/api/login`;
+        const cuerpoPeticion = { username: nombreUsuario, password: contrasena }; // Use 'username' and 'password' for backend compatibility
 
         try {
-            const response = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body), credentials: 'include' });
+            const response = await fetch(urlDestino, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(cuerpoPeticion), credentials: 'include' });
             const data = await response.json();
 
             if (response.ok) {
-                if (isRegistering) {
-                    setSuccess("¡Registro exitoso! Ahora puedes iniciar sesión."); setIsRegistering(false);
-                    setUsername(''); setPassword(''); setConfirmPassword('');
+                if (registrando) {
+                    setMensajeExito("¡Registro exitoso! Ahora puedes iniciar sesión."); setRegistrando(false);
+                    setNombreUsuario(''); setContrasena(''); setConfirmarContrasena('');
                 } else {
-                    setSuccess("¡Inicio de sesión exitoso!");
-                    
-                     setTimeout(() => {
-                         if (typeof onLoginSuccess === 'function') { onLoginSuccess(); }
-                         else { console.error('Login.jsx: onLoginSuccess no es una función'); }
-                     }, 100);
+                    setMensajeExito("¡Inicio de sesión exitoso!");
+                    setTimeout(() => {
+                        if (typeof onLoginSuccess === 'function') { onLoginSuccess(); }
+                        else { console.error('Login.jsx: onLoginSuccess no es una función'); }
+                    }, 100);
                 }
             } else {
-                setError(data.error || `Error ${response.status}: ${response.statusText || 'Error desconocido'}`);
+                setMensajeError(data.error || `Error ${response.status}: ${response.statusText || 'Error desconocido'}`);
             }
         } catch (err) {
-            console.error(`Login.jsx: Error en fetch ${isRegistering ? 'registro' : 'login'}:`, err);
-            setError("Error de red o del servidor. Inténtalo de nuevo.");
-        } finally { setLoading(false); }
+            console.error(`Login.jsx: Error en fetch ${registrando ? 'registro' : 'login'}:`, err);
+            setMensajeError("Error de red o del servidor. Inténtalo de nuevo.");
+        } finally { setCargando(false); }
     };
 
     return (
         <div className="login-animated-bg">
             <div className="w-full max-w-md p-8 space-y-6 bg-[var(--login-form-bg)] rounded-xl shadow-2xl backdrop-blur-md border border-[var(--login-form-border)]">
                  <h2 className="text-3xl font-bold text-center text-[var(--text-primary)]">
-                    {isRegistering ? 'Crear Cuenta' : 'Iniciar Sesión'}
+                    {registrando ? 'Crear Cuenta' : 'Iniciar Sesión'}
                 </h2>
 
-                <form className="space-y-6" onSubmit={handleSubmit}>
+                <form className="space-y-6" onSubmit={gestionarEnvio}>
                     <div>
-                        <label htmlFor="username" className="text-sm font-medium text-[var(--text-secondary)] block mb-2">
+                        <label htmlFor="username-login" className="text-sm font-medium text-[var(--text-secondary)] block mb-2">
                             Usuario
                         </label>
                         <input
-                            type="text" id="username" value={username} onChange={(e) => setUsername(e.target.value)} required
+                            type="text" id="username-login" value={nombreUsuario} onChange={(e) => setNombreUsuario(e.target.value)} required
                             className="w-full px-4 py-2 rounded-md border text-[var(--text-primary)] bg-[var(--bg-input)] border-[var(--border-input)] focus:outline-none focus:ring-1 focus:ring-[var(--border-input-focus)] placeholder:text-[var(--text-muted)]"
                             placeholder="tu_usuario" autoComplete='username'
                         />
                     </div>
 
                     <div>
-                        <label htmlFor="password" className="text-sm font-medium text-[var(--text-secondary)] block mb-2">
+                        <label htmlFor="password-login" className="text-sm font-medium text-[var(--text-secondary)] block mb-2">
                             Contraseña
                         </label>
                         <input
-                            type="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required
+                            type="password" id="password-login" value={contrasena} onChange={(e) => setContrasena(e.target.value)} required
                             className="w-full px-4 py-2 rounded-md border text-[var(--text-primary)] bg-[var(--bg-input)] border-[var(--border-input)] focus:outline-none focus:ring-1 focus:ring-[var(--border-input-focus)] placeholder:text-[var(--text-muted)]"
-                            placeholder="••••••••" autoComplete={isRegistering ? 'new-password' : 'current-password'}
+                            placeholder="••••••••" autoComplete={registrando ? 'new-password' : 'current-password'}
                         />
                     </div>
 
-                    {isRegistering && (
+                    {registrando && (
                         <div>
-                            <label htmlFor="confirmPassword" className="text-sm font-medium text-[var(--text-secondary)] block mb-2">
+                            <label htmlFor="confirmPassword-login" className="text-sm font-medium text-[var(--text-secondary)] block mb-2">
                                 Confirmar Contraseña
                             </label>
                             <input
-                                type="password" id="confirmPassword" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required
+                                type="password" id="confirmPassword-login" value={confirmarContrasena} onChange={(e) => setConfirmarContrasena(e.target.value)} required
                                 className="w-full px-4 py-2 rounded-md border text-[var(--text-primary)] bg-[var(--bg-input)] border-[var(--border-input)] focus:outline-none focus:ring-1 focus:ring-[var(--border-input-focus)] placeholder:text-[var(--text-muted)]"
                                 placeholder="••••••••" autoComplete='new-password'
                             />
                         </div>
                     )}
 
-                    {error && <p className="px-3 py-2 text-sm rounded border bg-[var(--bg-error-notification)] text-[var(--text-error)] border-[var(--border-error-notification)]">{error}</p>}
-                    {success && !error && <p className="px-3 py-2 text-sm rounded border bg-[var(--bg-success-notification)] text-[var(--text-success)] border-[var(--border-success)]">{success}</p>}
+                    {mensajeError && <p className="px-3 py-2 text-sm rounded border bg-[var(--bg-error-notification)] text-[var(--text-error)] border-[var(--border-error-notification)]">{mensajeError}</p>}
+                    {mensajeExito && !mensajeError && <p className="px-3 py-2 text-sm rounded border bg-[var(--bg-success-notification)] text-[var(--text-success)] border-[var(--border-success)]">{mensajeExito}</p>}
 
                     <div>
-                        <button type="submit" disabled={loading}
+                        <button type="submit" disabled={cargando}
                             className="w-full px-4 py-2 text-center rounded-md transition duration-150 ease-in-out bg-[var(--bg-button-primary)] text-[var(--text-button-primary)] hover:bg-[var(--bg-button-primary-hover)] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[var(--bg-surface)] focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
-                            {loading ? (
+                            {cargando ? (
                                 <div className="flex justify-center items-center">
                                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[var(--text-button-primary)]"></div>
-                                     <span className="ml-2">{isRegistering ? 'Registrando...' : 'Iniciando sesión...'}</span>
+                                     <span className="ml-2">{registrando ? 'Registrando...' : 'Iniciando sesión...'}</span>
                                 </div>
-                            ) : (isRegistering ? 'Registrarse' : 'Entrar')}
+                            ) : (registrando ? 'Registrarse' : 'Entrar')}
                         </button>
                     </div>
                 </form>
 
                 <p className="text-sm text-center text-[var(--text-muted)]">
-                    {isRegistering ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}
+                    {registrando ? '¿Ya tienes cuenta?' : '¿No tienes cuenta?'}
                     <button
                         onClick={() => {
-                            setIsRegistering(!isRegistering); setError(''); setSuccess('');
-                            setUsername(''); setPassword(''); setConfirmPassword('');
+                            setRegistrando(!registrando); setMensajeError(''); setMensajeExito('');
+                            setNombreUsuario(''); setContrasena(''); setConfirmarContrasena('');
                         }}
                         className="ml-1 font-medium text-[var(--text-accent)] hover:text-[var(--text-accent-hover)] focus:outline-none focus:underline">
-                        {isRegistering ? 'Inicia sesión' : 'Regístrate'}
+                        {registrando ? 'Inicia sesión' : 'Regístrate'}
                     </button>
                 </p>
 
