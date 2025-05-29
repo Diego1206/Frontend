@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import classNames from 'classnames';
 
-
+// --- ICONOS (Sin cambios) ---
 const IconoPapelera = ({ className = "" }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /> </svg> );
 const IconoMas = ({ className = "" }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 mr-1 md:mr-0 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" /> </svg> );
 const IconoChevronIzquierda = ({ className = "" }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /> </svg> );
@@ -20,29 +20,28 @@ export const IconoAltavozInactivo = ({ className = "" }) => ( <svg xmlns="http:/
 export const IconoMenu = ({ className = "" }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" /> </svg> );
 export const IconoCerrar = ({ className = "" }) => ( <svg xmlns="http://www.w3.org/2000/svg" className={`h-6 w-6 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}> <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /> </svg> );
 
-
 const Historial = ({
     historial, 
     establecerHistorial, 
     onSeleccionarConversacion, 
-    establecerConversacionOriginal, 
-    establecerIdConversacionActivaOriginal, 
+    establecerConversacionOriginal,
+    establecerIdConversacionActivaOriginal,
     listaArchivosUsuario, 
-    setListaArchivosUsuario, 
+    setListaArchivosUsuario,
     manejarSeleccionArchivo, 
     idConversacionActiva,
-    estaPanelLateralAbierto, 
-    establecerEstaPanelLateralAbierto, 
-    isMobileMenuOpen, 
-    toggleMobileMenu, 
-    refrescarListaArchivos, 
-    temperatura, 
-    establecerTemperatura, 
-    topP, 
-    establecerTopP, 
-    idioma, 
+    estaPanelLateralAbierto,
+    establecerEstaPanelLateralAbierto,
+    isMobileMenuOpen,
+    toggleMobileMenu,
+    refrescarListaArchivos,
+    temperatura,
+    establecerTemperatura,
+    topP,
+    establecerTopP,
+    idioma,
     establecerIdioma,
-    manejarLogout, 
+    manejarLogout,
     currentUser, 
     theme, 
     cambiarTema, 
@@ -229,199 +228,232 @@ const Historial = ({
         }
     };
 
-
     const clasesPanelLateral = classNames(
-        'flex', 'flex-col', 'flex-shrink-0', 'overflow-y-auto',
+        'flex', 'flex-col', 'flex-shrink-0', 
         'bg-sidebar', 'border-r', 'border-divider',
-        'transition-transform', 'duration-300', 'ease-in-out', 'custom-scrollbar',
-        'fixed', 'inset-y-0', 'left-0', 'z-40', 'w-72', 'p-4',
+        'transition-transform', 'duration-300', 'ease-in-out',
+        'fixed', 'inset-y-0', 'left-0', 'z-40',
         { 'translate-x-0': isMobileMenuOpen, '-translate-x-full': !isMobileMenuOpen },
         'md:relative', 'md:inset-auto', 'md:translate-x-0', 'md:transition-all',
-        { 'md:w-64 lg:w-72 md:p-4': estaPanelLateralAbierto, 'md:w-16 md:p-2 md:pt-4': !estaPanelLateralAbierto }
+        estaPanelLateralAbierto ? 'w-72 md:w-64 lg:w-72' : 'w-72 md:w-16'
     );
 
     const esMovil = esCliente && window.innerWidth < 768;
+    const alturaElementoHistorialAprox = 40; 
+    const maxConversacionesVisibles = 12; 
+    const maxHeightHistorial = alturaElementoHistorialAprox * maxConversacionesVisibles;
+    
+    // NUEVO: Calcular maxHeight para archivos
+    const alturaElementoArchivoAprox = 36; // Ajustar esto según el padding/altura de tus items de archivo (p-1.5 es 6px + 6px = 12px, más altura de texto/checkbox)
+    const maxArchivosVisibles = 3; // Cuántos archivos mostrar antes del scroll. CAMBIA ESTO A 2 SI PREFIERES
+    const maxHeightArchivosCalculado = alturaElementoArchivoAprox * maxArchivosVisibles;
+
+
+    const paddingClaseAbierto = 'p-4';
+    const paddingClaseCerrado = 'md:p-2 md:pt-4 p-4';
 
     return (
-        <aside
-        id="historial-sidebar"
-        className={classNames(clasesPanelLateral, 'z-[40]', { 'hidden md:block': mostrarConfiguracion })}
-    >
+        <>
+            <aside
+                id="historial-sidebar"
+                className={classNames(clasesPanelLateral)} 
+            >
+                <div className={classNames(
+                    'flex flex-col h-full', 
+                    estaPanelLateralAbierto ? paddingClaseAbierto : paddingClaseCerrado
+                )}>
 
-            <div className={classNames( 'hidden md:flex items-center mb-4 relative', { 'justify-between space-x-2': estaPanelLateralAbierto, 'w-full justify-center': !estaPanelLateralAbierto } )}>
-                 {estaPanelLateralAbierto && (
-                      <div className="flex-grow min-w-0 mr-2">
-                           {mostrarInputBusqueda ? (
-                               <input ref={refInputBusqueda} type="search" placeholder={idioma === 'es' ? "Buscar historial..." : "Search history..."} value={textoBusqueda} onChange={(e) => setTextoBusqueda(e.target.value)} onKeyDown={gestionarTeclaEnInputBusqueda} onBlur={gestionarOcultarInputBusqueda} className="w-full px-2 py-1 rounded-md border text-sm outline-none transition-all bg-surface text-primary border-input input-focus placeholder:text-muted"/>
-                           ) : (
-                               <button onClick={() => setMostrarInputBusqueda(true)} className="p-1.5 rounded-md transition-colors text-secondary hover:text-primary hover:bg-hover-item cursor-pointer" title={idioma === 'es' ? "Buscar conversación" : "Search conversations"}> <IconoBuscar /> </button>
-                           )}
-                      </div>
-                 )}
-                 <button onClick={() => establecerEstaPanelLateralAbierto(!estaPanelLateralAbierto)} className="p-1.5 rounded-md transition-colors flex-shrink-0 bg-surface hover:bg-hover-item text-secondary hover:text-primary cursor-pointer" title={estaPanelLateralAbierto ? (idioma === 'es' ? "Cerrar panel" : "Collapse panel") : (idioma === 'es' ? "Abrir panel" : "Expand panel")}>
-                     {estaPanelLateralAbierto ? <IconoChevronIzquierda /> : <IconoChevronDerecha />}
-                 </button>
-            </div>
-             {mostrarConfiguracion && (
-            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-sm bg-modal-overlay">
-                <div className="p-6 w-full max-w-md relative rounded-lg shadow-xl bg-surface border border-divider">
-                    <h2 className="text-lg font-semibold mb-4 text-primary">
-                        {idioma === 'es' ? 'Ajustes' : 'Settings'}
-                    </h2>
-                    <div className="mb-4">
-                        <label htmlFor="temperatura" className="block text-sm font-medium text-secondary mb-1">
-                            {idioma === 'es' ? 'Temperatura: ' : 'Temperature: '}
-                            <span className="font-mono text-xs text-accent">{temperatura.toFixed(2)}</span>
-                        </label>
-                        <input
-                            type="range"
-                            id="temperatura"
-                            min="0"
-                            max="1"
-                            step="0.05"
-                            value={temperatura}
-                            onChange={gestionarCambioTemperatura}
-                            className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-input accent-blue-500"
-                        />
-                        <p className="text-xs text-muted mt-1">
-                            {idioma === 'es' ? 'Controla la aleatoriedad: valores más altos significan más creatividad, más bajos más determinismo.' : 'Controls randomness: higher values mean more creativity, lower values more determinism.'}
-                        </p>
-                    </div>
-                    <div className="mb-4">
-                        <label htmlFor="topP" className="block text-sm font-medium text-secondary mb-1">
-                            Top-P: <span className="font-mono text-xs text-success">{topP.toFixed(2)}</span>
-                        </label>
-                        <input
-                            type="range"
-                            id="topP"
-                            min="0"
-                            max="1"
-                            step="0.05"
-                            value={topP}
-                            onChange={gestionarCambioTopP}
-                            className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-input accent-green-500"
-                        />
-                        <p className="text-xs text-muted mt-1">
-                            {idioma === 'es' ? 'Controla la diversidad de las respuestas.' : 'Controls the diversity of the responses.'}
-                        </p>
-                    </div>
-                    <div className="mb-5">
-                        <label htmlFor="idioma" className="block text-sm font-medium text-secondary mb-1">
-                            {idioma === 'es' ? 'Idioma' : 'Language'}
-                        </label>
-                        <select
-                            id="idioma"
-                            value={idioma}
-                            onChange={gestionarCambioIdioma}
-                            className="w-full p-2 rounded-md border text-sm bg-input text-primary border-input input-focus cursor-pointer"
-                        >
-                            <option value="es">Español</option>
-                            <option value="en">English</option>
-                        </select>
-                    </div>
-                    <div className="text-right mt-6">
-                        <button
-                            onClick={() => setMostrarConfiguracion(false)}
-                            className="px-4 py-2 rounded-md text-sm transition-colors bg-button-primary text-button-primary cursor-pointer"
-                        >
-                            {idioma === 'es' ? 'Cerrar' : 'Close'}
+                    <div className={classNames( 'hidden md:flex items-center relative flex-shrink-0', 
+                                                estaPanelLateralAbierto ? 'mb-4 justify-between space-x-2' : 'mb-2 w-full justify-center')}>
+                        {estaPanelLateralAbierto && (
+                            <div className="flex-grow min-w-0 mr-2">
+                                {mostrarInputBusqueda ? (
+                                    <input ref={refInputBusqueda} type="search" placeholder={idioma === 'es' ? "Buscar historial..." : "Search history..."} value={textoBusqueda} onChange={(e) => setTextoBusqueda(e.target.value)} onKeyDown={gestionarTeclaEnInputBusqueda} onBlur={gestionarOcultarInputBusqueda} className="w-full px-2 py-1 rounded-md border text-sm outline-none transition-all bg-surface text-primary border-input input-focus placeholder:text-muted"/>
+                                ) : (
+                                    <button onClick={() => setMostrarInputBusqueda(true)} className="p-1.5 rounded-md transition-colors text-secondary hover:text-primary hover:bg-hover-item cursor-pointer" title={idioma === 'es' ? "Buscar conversación" : "Search conversations"}> <IconoBuscar /> </button>
+                                )}
+                            </div>
+                        )}
+                        <button onClick={() => establecerEstaPanelLateralAbierto(!estaPanelLateralAbierto)} className="p-1.5 rounded-md transition-colors flex-shrink-0 bg-surface hover:bg-hover-item text-secondary hover:text-primary cursor-pointer" title={estaPanelLateralAbierto ? (idioma === 'es' ? "Cerrar panel" : "Collapse panel") : (idioma === 'es' ? "Abrir panel" : "Expand panel")}>
+                            {estaPanelLateralAbierto ? <IconoChevronIzquierda /> : <IconoChevronDerecha />}
                         </button>
                     </div>
-                </div>
-            </div>
-        )}
-            <div className={classNames('flex flex-col h-full', { 'md:items-center': !estaPanelLateralAbierto })}>
-                 <div className={classNames('flex-shrink-0 relative', { 'mb-4 w-full px-1': estaPanelLateralAbierto, 'w-auto mb-4 md:w-full': !estaPanelLateralAbierto })}>
-                     <button
-                        onClick={gestionarNuevaConversacionVaciaWrapper}
-                        className={classNames(
-                            'p-2.5 font-medium rounded-lg transition-colors text-sm flex items-center shadow-sm cursor-pointer bg-button-primary text-button-primary',
-                            { 'w-full justify-center': estaPanelLateralAbierto, 'justify-center': !estaPanelLateralAbierto }
+                
+                    <div className={classNames('flex-shrink-0 relative', { 'mb-4 w-full': estaPanelLateralAbierto, 'w-auto mb-4 md:w-full': !estaPanelLateralAbierto })}>
+                        <button
+                            onClick={gestionarNuevaConversacionVaciaWrapper}
+                            className={classNames(
+                                'p-2.5 font-medium rounded-lg transition-colors text-sm flex items-center shadow-sm cursor-pointer bg-button-primary text-button-primary',
+                                { 'w-full justify-center': estaPanelLateralAbierto, 'justify-center': !estaPanelLateralAbierto }
+                            )}
+                            title={idioma === 'es' ? "Nueva conversación" : "New chat"}
+                        >
+                            <IconoMas className={classNames({'md:mr-0': !estaPanelLateralAbierto})} />
+                            {(estaPanelLateralAbierto || esMovil) && <span className={classNames("ml-1", {'hidden md:inline': estaPanelLateralAbierto && !esMovil, 'inline': esMovil})}>{idioma === 'es' ? 'Nueva Conversación' : 'New Conversation'}</span>}
+                        </button>
+                    </div>
+
+                    {(estaPanelLateralAbierto || esMovil) && <hr className={classNames("mb-4 flex-shrink-0 border-divider", {'hidden md:block': !estaPanelLateralAbierto && !esMovil})} />}
+                    
+                    <div className="flex-grow flex flex-col min-h-0"> 
+                        <div className={classNames('flex-shrink-0', { 'md:hidden': !estaPanelLateralAbierto && !esMovil }, estaPanelLateralAbierto ? 'mb-6' : 'mb-2')}>
+                            {estaPanelLateralAbierto && <h2 className="text-xs font-semibold uppercase tracking-wider mb-2 px-1 flex-shrink-0 text-muted">{idioma === 'es' ? 'Historial' : 'History'}</h2>}
+                            {errorAlCargarMensajes && estaPanelLateralAbierto && ( <p className="px-2 py-1 mb-2 text-xs rounded border bg-error-notification text-error border-error-notification"> {errorAlCargarMensajes} </p> )}
+                            
+                            {estaPanelLateralAbierto && Array.isArray(conversacionesFiltradas) && conversacionesFiltradas.length > 0 ? (
+                                <div 
+                                    className="overflow-y-auto custom-scrollbar pr-1"
+                                    style={{ maxHeight: `${maxHeightHistorial}px` }}
+                                >
+                                    <ul className="space-y-1">
+                                        {conversacionesFiltradas.map((item) => {
+                                            if (!item || typeof item.id === 'undefined') return null;
+                                            const estaSeleccionado = item.id === idConversacionActiva;
+                                            const estaEditando = idConvEditandoTitulo === item.id;
+                                            return (
+                                                <li key={item.id}>
+                                                    <div onClick={() => !estaEditando && gestionarClicConversacionWrapper(item.id)}
+                                                        className={classNames( 'w-full group flex justify-between items-center text-left p-2 rounded-md transition-colors text-sm relative', { 'cursor-pointer hover:bg-hover-item': !estaEditando, 'bg-active-item font-medium': estaSeleccionado && !estaEditando, 'bg-input': estaEditando, 'opacity-50 pointer-events-none': cargandoMensajes && idConversacionActiva === item.id, } )} title={item.titulo || ''} >
+                                                        {cargandoMensajes && idConversacionActiva === item.id && ( <div className="absolute inset-0 flex items-center justify-center rounded-md z-10 bg-sidebar bg-opacity-75"> <div className="w-4 h-4 border-b-2 rounded-full animate-spin border-secondary"></div> </div> )}
+                                                        {estaEditando ? ( <input ref={refInputTitulo} type="text" value={tituloEnEdicion} onChange={gestionarCambioTituloInput} onKeyDown={gestionarTeclaEnInputTitulo} onBlur={guardarTituloEditado} className="flex-1 px-1 py-0 mr-2 text-sm outline-none z-10 bg-transparent text-primary border-b border-accent" onClick={(e) => e.stopPropagation()} /> ) : ( <span className={classNames( 'flex-1 pr-2 truncate', { 'text-primary': estaSeleccionado, 'text-secondary group-hover:text-primary': !estaSeleccionado } )}> {item.titulo} </span> )}
+                                                        {!estaEditando && (
+                                                            <div className={classNames( 'flex items-center flex-shrink-0 space-x-1 transition-opacity z-20', 'opacity-0 focus-within:opacity-100', { 'opacity-100': estaSeleccionado, 'md:group-hover:opacity-100': !estaSeleccionado } )}>
+                                                                <button onClick={(e) => { e.stopPropagation(); iniciarEdicionTitulo(item.id, item.titulo); }} className="p-1 rounded-md text-muted hover:text-primary hover:bg-hover-item cursor-pointer" title={idioma === 'es' ? "Renombrar" : "Rename"}> <IconoEditar className="transition-colors duration-150 ease-in-out" /> </button>
+                                                                <button onClick={(e) => { e.stopPropagation(); gestionarBorrarConversacion(item.id); }} className="p-1 rounded-md text-muted hover:bg-hover-item cursor-pointer" title={idioma === 'es' ? "Borrar" : "Delete"}> <IconoPapelera className="group-hover:stroke-error transition-colors duration-150 ease-in-out" /> </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </li>
+                                            );
+                                        })}
+                                    </ul>
+                                </div>
+                            ) : ( estaPanelLateralAbierto && <p className="px-1 text-sm flex-shrink-0 text-muted"> {textoBusqueda ? (idioma === 'es' ? 'No hay coincidencias.' : 'No matches found.') : (idioma === 'es' ? 'No hay conversaciones.' : 'No conversations yet.')} </p> )}
+                        </div>
+
+                        <div className={classNames('flex-shrink-0', { 'md:hidden': !estaPanelLateralAbierto && !esMovil }, estaPanelLateralAbierto ? 'border-t border-divider pt-4' : 'border-t border-divider pt-2')}>
+                            { estaPanelLateralAbierto && (
+                                <div className="flex items-center justify-between px-1 mb-2 transition-colors rounded cursor-pointer hover:bg-hover-item flex-shrink-0" onClick={() => setArchivosAbiertos(!archivosAbiertos)} title={archivosAbiertos ? (idioma === 'es' ? "Ocultar" : "Hide") : (idioma === 'es' ? "Mostrar" : "Show")}>
+                                    <h3 className="text-xs font-semibold tracking-wider uppercase text-muted">{idioma === 'es' ? 'Archivos Disponibles' : 'Available Files'}</h3>
+                                    <div className="flex items-center space-x-1">
+                                        <button onClick={(e) => { e.stopPropagation(); if(typeof refrescarListaArchivos === 'function') refrescarListaArchivos(false); }} className="p-1 transition-colors rounded-md text-muted hover:text-primary hover:bg-hover-item cursor-pointer" title={idioma === 'es' ? "Refrescar" : "Refresh"}> <IconoRefrescar /> </button>
+                                        <span className="p-1 text-muted">{archivosAbiertos ? <IconoChevronArriba /> : <IconoChevronAbajo />}</span>
+                                    </div>
+                                </div>
+                            )}
+                            {estaPanelLateralAbierto && archivosAbiertos && (
+                                <div 
+                                    className="overflow-y-auto custom-scrollbar pr-1"
+                                    style={{maxHeight: `${maxHeightArchivosCalculado}px`}} // Usar maxHeight calculado
+                                > 
+                                    {Array.isArray(listaArchivosUsuario) && listaArchivosUsuario.filter(f => f && !f.esNuevo).length > 0 ? (
+                                        <div className="pb-2 space-y-1"> 
+                                            {listaArchivosUsuario.filter(f => f && !f.esNuevo).map((archivo) => {
+                                                if (!archivo || typeof archivo.name === 'undefined' || typeof archivo.seleccionado === 'undefined') return null;
+                                                const archivoSeleccionado = !!archivo.seleccionado;
+                                                return (
+                                                    <div key={archivo.name} className={classNames( 'group flex items-center p-1.5 rounded-md transition-colors text-sm', { 'bg-active-item': archivoSeleccionado, 'hover:bg-hover-item': !archivoSeleccionado } )}>
+                                                            <input type="checkbox" value={archivo.name} checked={archivoSeleccionado} onChange={() => manejarSeleccionArchivo(archivo.name)} className="w-4 h-4 mr-2 rounded cursor-pointer flex-shrink-0 form-checkbox bg-input border-input text-accent focus:ring-accent/50 focus:ring-1 focus:ring-offset-0" id={`file-checkbox-${archivo.name}`} />
+                                                            <label htmlFor={`file-checkbox-${archivo.name}`} className={classNames( 'flex-1 truncate cursor-pointer', { 'text-accent': archivoSeleccionado, 'text-secondary group-hover:text-primary': !archivoSeleccionado } )} title={archivo.displayName || ''}> {archivo.displayName} </label>
+                                                        <button onClick={(e) => { e.stopPropagation(); gestionarBorrarArchivoUsuario(archivo.name, archivo.displayName); }} className={classNames( 'flex-shrink-0 p-1 ml-auto rounded-md text-muted hover:bg-hover-item cursor-pointer', 'transition-opacity focus-within:opacity-100', 'opacity-0', { 'opacity-100': archivoSeleccionado, 'md:group-hover:opacity-100': !archivoSeleccionado } )} title={idioma === 'es' ? "Borrar archivo" : "Delete file"}> <IconoPapelera className="group-hover:stroke-error transition-colors duration-150 ease-in-out" /> </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : ( <p className="px-1 pb-2 text-sm text-muted">{idioma === 'es' ? 'No hay archivos subidos.' : 'No files uploaded.'}</p> )}
+                                </div>
+                            )}
+                        </div>
+                        <div className="flex-grow"></div>
+                    </div>
+
+                    <div className={classNames( 'flex-shrink-0 border-t border-divider', 
+                                                estaPanelLateralAbierto ? 'pt-4' : 'mt-auto pt-2 pb-2 flex flex-col items-center space-y-3' )}>
+                        {(estaPanelLateralAbierto || (esMovil && !estaPanelLateralAbierto && isMobileMenuOpen)) && currentUser && (
+                             <div className={classNames("text-xs truncate text-muted", estaPanelLateralAbierto ? 'px-1 mb-2' : 'mb-2 text-center w-full')}>
+                                {idioma === 'es' ? 'Usuario: ' : 'Logged in as: '}
+                                <span className="font-medium text-secondary">{currentUser.username}</span>
+                            </div>
                         )}
-                        title={idioma === 'es' ? "Nueva conversación" : "New chat"}
-                     >
-                         <IconoMas className={classNames({'md:mr-0': !estaPanelLateralAbierto})} />
-                         {(estaPanelLateralAbierto || esMovil) && <span className="ml-1">{idioma === 'es' ? 'Nueva Conversación' : 'New Conversation'}</span>}
-                     </button>
-                 </div>
-
-                {(estaPanelLateralAbierto || esMovil) && <hr className="mb-4 flex-shrink-0 border-divider" />}
-
-                <div className={classNames('flex flex-col flex-grow min-h-0 mb-6', { 'md:hidden': !estaPanelLateralAbierto && !esMovil })}>
-                    <h2 className="text-xs font-semibold uppercase tracking-wider mb-2 px-1 flex-shrink-0 text-muted">{idioma === 'es' ? 'Historial' : 'History'}</h2>
-                    {errorAlCargarMensajes && ( <p className="px-2 py-1 mb-2 text-xs rounded border bg-error-notification text-error border-error-notification"> {errorAlCargarMensajes} </p> )}
-                    {Array.isArray(conversacionesFiltradas) && conversacionesFiltradas.length > 0 ? (
-                        <div className="flex-grow overflow-y-auto pr-1 min-h-0 custom-scrollbar">
-                            <ul className="space-y-1">
-                                {conversacionesFiltradas.map((item) => {
-                                    if (!item || typeof item.id === 'undefined') return null;
-                                    const estaSeleccionado = item.id === idConversacionActiva;
-                                    const estaEditando = idConvEditandoTitulo === item.id;
-                                    return (
-                                        <li key={item.id}>
-                                            <div onClick={() => !estaEditando && gestionarClicConversacionWrapper(item.id)}
-                                                className={classNames( 'w-full group flex justify-between items-center text-left p-2 rounded-md transition-colors text-sm relative', { 'cursor-pointer hover:bg-hover-item': !estaEditando, 'bg-active-item font-medium': estaSeleccionado && !estaEditando, 'bg-input': estaEditando, 'opacity-50 pointer-events-none': cargandoMensajes && idConversacionActiva === item.id, } )} title={item.titulo || ''} >
-                                                {cargandoMensajes && idConversacionActiva === item.id && ( <div className="absolute inset-0 flex items-center justify-center rounded-md z-10 bg-sidebar bg-opacity-75"> <div className="w-4 h-4 border-b-2 rounded-full animate-spin border-secondary"></div> </div> )}
-                                                {estaEditando ? ( <input ref={refInputTitulo} type="text" value={tituloEnEdicion} onChange={gestionarCambioTituloInput} onKeyDown={gestionarTeclaEnInputTitulo} onBlur={guardarTituloEditado} className="flex-1 px-1 py-0 mr-2 text-sm outline-none z-10 bg-transparent text-primary border-b border-accent" onClick={(e) => e.stopPropagation()} /> ) : ( <span className={classNames( 'flex-1 pr-2 truncate', { 'text-primary': estaSeleccionado, 'text-secondary group-hover:text-primary': !estaSeleccionado } )}> {item.titulo} </span> )}
-                                                {!estaEditando && (
-                                                     <div className={classNames( 'flex items-center flex-shrink-0 space-x-1 transition-opacity z-20', 'opacity-0 focus-within:opacity-100', { 'opacity-100': estaSeleccionado, 'md:group-hover:opacity-100': !estaSeleccionado } )}>
-                                                         <button onClick={(e) => { e.stopPropagation(); iniciarEdicionTitulo(item.id, item.titulo); }} className="p-1 rounded-md text-muted hover:text-primary hover:bg-hover-item cursor-pointer" title={idioma === 'es' ? "Renombrar" : "Rename"}> <IconoEditar className="transition-colors duration-150 ease-in-out" /> </button>
-                                                         <button onClick={(e) => { e.stopPropagation(); gestionarBorrarConversacion(item.id); }} className="p-1 rounded-md text-muted hover:bg-hover-item cursor-pointer" title={idioma === 'es' ? "Borrar" : "Delete"}> <IconoPapelera className="group-hover:stroke-error transition-colors duration-150 ease-in-out" /> </button>
-                                                     </div>
-                                                )}
-                                             </div>
-                                        </li>
-                                    );
-                                })}
-                            </ul>
+                        <div className={classNames( 'flex items-center',
+                                                    estaPanelLateralAbierto ? 'justify-between space-x-2 px-1 pb-1' : 'flex-col space-y-3')}>
+                            <button onClick={cambiarTema} className={classNames('p-2 transition-colors rounded-md text-secondary hover:text-primary cursor-pointer', {'hover:bg-hover-item': estaPanelLateralAbierto})} title={theme === 'dark' ? (idioma === 'es' ? 'Modo Claro' : 'Light Mode') : (idioma === 'es' ? 'Modo Oscuro' : 'Dark Mode')} > {theme === 'dark' ? <IconoSol /> : <IconoLuna />} </button>
+                            <button onClick={() => setMostrarConfiguracion(true)} className={classNames('p-2 transition-colors rounded-md text-secondary hover:text-primary cursor-pointer', {'hover:bg-hover-item': estaPanelLateralAbierto})} title={idioma==='es'?'Ajustes':'Settings'}> <IconoAjustes /> </button>
+                            <button onClick={manejarLogout} className={classNames('group p-2 transition-colors rounded-md text-muted cursor-pointer', {'hover:bg-hover-item': estaPanelLateralAbierto})} title={idioma==='es'?'Cerrar Sesión':'Logout'}> <IconoLogout className="group-hover:stroke-error transition-colors duration-150 ease-in-out" /> </button>
                         </div>
-                    ) : ( <p className="px-1 text-sm flex-shrink-0 text-muted"> {textoBusqueda ? (idioma === 'es' ? 'No hay coincidencias.' : 'No matches found.') : (idioma === 'es' ? 'No hay conversaciones.' : 'No conversations yet.')} </p> )}
+                    </div>
                 </div>
-
-                <div className={classNames('flex-shrink-0 pt-4 mt-auto border-t border-divider', { 'md:hidden': !estaPanelLateralAbierto && !esMovil })}>
-                     <div className="flex items-center justify-between px-1 mb-2 transition-colors rounded cursor-pointer hover:bg-hover-item" onClick={() => setArchivosAbiertos(!archivosAbiertos)} title={archivosAbiertos ? (idioma === 'es' ? "Ocultar" : "Hide") : (idioma === 'es' ? "Mostrar" : "Show")}>
-                         <h3 className="text-xs font-semibold tracking-wider uppercase text-muted">{idioma === 'es' ? 'Archivos Disponibles' : 'Available Files'}</h3>
-                         <div className="flex items-center space-x-1">
-                              <button onClick={(e) => { e.stopPropagation(); if(typeof refrescarListaArchivos === 'function') refrescarListaArchivos(false); }} className="p-1 transition-colors rounded-md text-muted hover:text-primary hover:bg-hover-item cursor-pointer" title={idioma === 'es' ? "Refrescar" : "Refresh"}> <IconoRefrescar /> </button>
-                              <span className="p-1 text-muted">{archivosAbiertos ? <IconoChevronArriba /> : <IconoChevronAbajo />}</span>
-                         </div>
-                     </div>
-                      {archivosAbiertos && (
-                          <>
-                             {Array.isArray(listaArchivosUsuario) && listaArchivosUsuario.filter(f => f && !f.esNuevo).length > 0 ? (
-                                  <div className="pb-2 pr-1 space-y-1 overflow-y-auto max-h-40 custom-scrollbar">
-                                      {listaArchivosUsuario.filter(f => f && !f.esNuevo).map((archivo) => {
-                                          if (!archivo || typeof archivo.name === 'undefined' || typeof archivo.seleccionado === 'undefined') return null;
-                                          const archivoSeleccionado = !!archivo.seleccionado;
-                                          return (
-                                              <div key={archivo.name} className={classNames( 'group flex items-center p-1.5 rounded-md transition-colors text-sm', { 'bg-active-item': archivoSeleccionado, 'hover:bg-hover-item': !archivoSeleccionado } )}>
-                                                    <input type="checkbox" value={archivo.name} checked={archivoSeleccionado} onChange={() => manejarSeleccionArchivo(archivo.name)} className="w-4 h-4 mr-2 rounded cursor-pointer flex-shrink-0 form-checkbox bg-input border-input text-accent focus:ring-accent/50 focus:ring-1 focus:ring-offset-0" id={`file-checkbox-${archivo.name}`} />
-                                                    <label htmlFor={`file-checkbox-${archivo.name}`} className={classNames( 'flex-1 truncate cursor-pointer', { 'text-accent': archivoSeleccionado, 'text-secondary group-hover:text-primary': !archivoSeleccionado } )} title={archivo.displayName || ''}> {archivo.displayName} </label>
-                                                   <button onClick={(e) => { e.stopPropagation(); gestionarBorrarArchivoUsuario(archivo.name, archivo.displayName); }} className={classNames( 'flex-shrink-0 p-1 ml-auto rounded-md text-muted hover:bg-hover-item cursor-pointer', 'transition-opacity focus-within:opacity-100', 'opacity-0', { 'opacity-100': archivoSeleccionado, 'md:group-hover:opacity-100': !archivoSeleccionado } )} title={idioma === 'es' ? "Borrar archivo" : "Delete file"}> <IconoPapelera className="group-hover:stroke-error transition-colors duration-150 ease-in-out" /> </button>
-                                              </div>
-                                          );
-                                      })}
-                                  </div>
-                              ) : ( <p className="px-1 pb-2 text-sm text-muted">{idioma === 'es' ? 'No hay archivos subidos.' : 'No files uploaded.'}</p> )}
-                          </>
-                      )}
-                  </div>
-
-                 <div className={classNames( 'mt-auto pt-4 border-t border-divider', { 'px-1 pb-2': estaPanelLateralAbierto, 'flex flex-col items-center space-y-4 pb-4': !estaPanelLateralAbierto } )}>
-                     {(estaPanelLateralAbierto || esMovil) && currentUser && (
-                        <div className="px-1 mb-2 text-xs truncate text-muted" title={currentUser.username || ''}>
-                            {idioma === 'es' ? 'Usuario: ' : 'Logged in as: '}
-                            <span className="font-medium text-secondary">{currentUser.username}</span>
+            </aside>
+            
+            {mostrarConfiguracion && (
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 backdrop-blur-sm bg-modal-overlay">
+                    <div className="p-6 w-full max-w-md relative rounded-lg shadow-xl bg-surface border border-divider">
+                        <h2 className="text-lg font-semibold mb-4 text-primary">
+                            {idioma === 'es' ? 'Ajustes' : 'Settings'}
+                        </h2>
+                        <div className="mb-4">
+                            <label htmlFor="temperatura" className="block text-sm font-medium text-secondary mb-1">
+                                {idioma === 'es' ? 'Temperatura: ' : 'Temperature: '}
+                                <span className="font-mono text-xs text-accent">{temperatura.toFixed(2)}</span>
+                            </label>
+                            <input
+                                type="range"
+                                id="temperatura"
+                                min="0"
+                                max="1"
+                                step="0.05"
+                                value={temperatura}
+                                onChange={gestionarCambioTemperatura}
+                                className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-input accent-blue-500"
+                            />
+                            <p className="text-xs text-muted mt-1">
+                                {idioma === 'es' ? 'Controla la aleatoriedad: valores más altos significan más creatividad, más bajos más determinismo.' : 'Controls randomness: higher values mean more creativity, lower values more determinism.'}
+                            </p>
                         </div>
-                     )}
-                     <div className={classNames( 'flex', { 'justify-between items-center space-x-2': estaPanelLateralAbierto, 'flex-col items-center space-y-4': !estaPanelLateralAbierto } )}>
-                         <button onClick={cambiarTema} className={classNames('p-2 transition-colors rounded-md text-secondary hover:text-primary cursor-pointer', {'hover:bg-hover-item': estaPanelLateralAbierto})} title={theme === 'dark' ? (idioma === 'es' ? 'Modo Claro' : 'Light Mode') : (idioma === 'es' ? 'Modo Oscuro' : 'Dark Mode')} > {theme === 'dark' ? <IconoSol /> : <IconoLuna />} </button>
-                         <button onClick={() => setMostrarConfiguracion(true)} className={classNames('p-2 transition-colors rounded-md text-secondary hover:text-primary cursor-pointer', {'hover:bg-hover-item': estaPanelLateralAbierto})} title={idioma==='es'?'Ajustes':'Settings'}> <IconoAjustes /> </button>
-                        <button onClick={manejarLogout} className={classNames('group p-2 transition-colors rounded-md text-muted cursor-pointer', {'hover:bg-hover-item': estaPanelLateralAbierto})} title={idioma==='es'?'Cerrar Sesión':'Logout'}> <IconoLogout className="group-hover:stroke-error transition-colors duration-150 ease-in-out" /> </button>
-                     </div>
-                 </div>
-            </div>
-        </aside>
+                        <div className="mb-4">
+                            <label htmlFor="topP" className="block text-sm font-medium text-secondary mb-1">
+                                Top-P: <span className="font-mono text-xs text-success">{topP.toFixed(2)}</span>
+                            </label>
+                            <input
+                                type="range"
+                                id="topP"
+                                min="0"
+                                max="1"
+                                step="0.05"
+                                value={topP}
+                                onChange={gestionarCambioTopP}
+                                className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-input accent-green-500"
+                            />
+                            <p className="text-xs text-muted mt-1">
+                                {idioma === 'es' ? 'Controla la diversidad de las respuestas.' : 'Controls the diversity of the responses.'}
+                            </p>
+                        </div>
+                        <div className="mb-5">
+                            <label htmlFor="idioma" className="block text-sm font-medium text-secondary mb-1">
+                                {idioma === 'es' ? 'Idioma' : 'Language'}
+                            </label>
+                            <select
+                                id="idioma"
+                                value={idioma}
+                                onChange={gestionarCambioIdioma}
+                                className="w-full p-2 rounded-md border text-sm bg-input text-primary border-input input-focus cursor-pointer"
+                            >
+                                <option value="es">Español</option>
+                                <option value="en">English</option>
+                            </select>
+                        </div>
+                        <div className="text-right mt-6">
+                            <button
+                                onClick={() => setMostrarConfiguracion(false)}
+                                className="px-4 py-2 rounded-md text-sm transition-colors bg-button-primary text-button-primary cursor-pointer"
+                            >
+                                {idioma === 'es' ? 'Cerrar' : 'Close'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 
