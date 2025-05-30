@@ -1,3 +1,5 @@
+
+
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
@@ -12,28 +14,28 @@ const IconoDescargar = ({className = ""}) => ( <svg xmlns="http://www.w3.org/200
 const MODELOS_DISPONIBLES = {
     "gemini-1.5-flash": "Gemini 1.5 Flash (Rápido)",
     "gemini-1.5-pro": "Gemini 1.5 Pro (Avanzado)",
-    "gemini-2.0-flash": "Gemini 2.0 Flash (Experimental)", 
-    "gemini-2.5-pro-exp-03-25": "Gemini 2.5 Pro (Avance)" 
+    "gemini-2.0-flash": "Gemini 2.0 Flash (Experimental)",
+    
 };
 const MODELO_POR_DEFECTO_FRONTEND = "gemini-1.5-flash";
 
 
 const Chat = ({
-    conversacion, 
-    establecerConversacion, 
-    listaArchivosUsuario, 
-    archivosPdfNuevos, 
-    manejarCambioArchivoInput, 
-    limpiarArchivosPdfNuevosYRefrescar, 
-    idConversacionActiva, 
-    establecerIdConversacionActiva, 
-    temperatura, 
-    topP, 
-    idioma, 
+    conversacion,
+    establecerConversacion,
+    listaArchivosUsuario,
+    archivosPdfNuevos,
+    manejarCambioArchivoInput,
+    limpiarArchivosPdfNuevosYRefrescar,
+    idConversacionActiva,
+    establecerIdConversacionActiva,
+    temperatura,
+    topP,
+    idioma,
     refrescarHistorial,
-    leerEnVozAltaActivado, 
-    toggleMobileMenu, 
-    backendUrl 
+    leerEnVozAltaActivado,
+    toggleMobileMenu,
+    backendUrl
 }) => {
     const [estaCargandoRespuesta, setEstaCargandoRespuesta] = useState(false);
     const [mensajeErrorChat, setMensajeErrorChat] = useState("");
@@ -57,7 +59,7 @@ const Chat = ({
     useEffect(() => {
         refConvActualTTS.current = conversacion;
     }, [conversacion]);
-    
+
     useEffect(() => {
       if (typeof window !== 'undefined') localStorage.setItem('modeloSeleccionadoIA', modeloIaSeleccionado);
     }, [modeloIaSeleccionado]);
@@ -78,7 +80,7 @@ const Chat = ({
             synth.cancel(); setIdMensajeReproduciendo(null); refDeclaracionVoz.current = null; return;
         }
         if (synth.speaking) { synth.cancel(); }
-        
+
         const declaracion = new SpeechSynthesisUtterance(texto);
         refDeclaracionVoz.current = declaracion;
         declaracion.lang = idioma === 'es' ? 'es-ES' : 'en-US';
@@ -90,7 +92,7 @@ const Chat = ({
 
     useEffect(() => {
         if (!leerEnVozAltaActivado || !sintesisVozDisponible || !refConvActualTTS.current || refConvActualTTS.current.length === 0) return;
-        
+
         const convActual = refConvActualTTS.current;
         const ultimoMensaje = convActual[convActual.length - 1];
 
@@ -101,12 +103,12 @@ const Chat = ({
                 } else { return; }
             }
             const temporizadorId = setTimeout(() => {
-                 const convActualizadaParaTTS = refConvActualTTS.current; 
+                 const convActualizadaParaTTS = refConvActualTTS.current;
                  if (convActualizadaParaTTS && convActualizadaParaTTS.length > 0 && convActualizadaParaTTS[convActualizadaParaTTS.length - 1] === ultimoMensaje) {
-                     console.log("[TTS Auto] Leyendo ID:", ultimoMensaje.id, ultimoMensaje.text.substring(0,30) + "...");
+                     // console.log("[TTS Auto] Leyendo ID:", ultimoMensaje.id, ultimoMensaje.text.substring(0,30) + "...");
                      gestionarReproducirDetenerVoz(ultimoMensaje.text, ultimoMensaje.id);
                  }
-            }, 150); 
+            }, 150);
              return () => clearTimeout(temporizadorId);
         }
     }, [leerEnVozAltaActivado, sintesisVozDisponible, gestionarReproducirDetenerVoz, conversacion]);
@@ -120,7 +122,15 @@ const Chat = ({
         });
     }, []);
 
-    const ajustarAlturaInputTexto = () => { const areaTexto = refEntradaTexto.current; if (areaTexto) { areaTexto.style.height = 'auto'; const scrollHeight = areaTexto.scrollHeight; const maxHeight = 120; areaTexto.style.height = `${Math.min(scrollHeight, maxHeight)}px`; } };
+    const ajustarAlturaInputTexto = () => { 
+        const areaTexto = refEntradaTexto.current; 
+        if (areaTexto) { 
+            areaTexto.style.height = 'auto'; 
+            const scrollHeight = areaTexto.scrollHeight; 
+            const maxHeight = 120; 
+            areaTexto.style.height = `${Math.min(scrollHeight, maxHeight)}px`; 
+        } 
+    };
 
     useEffect(() => { irAFinalDeChat(); }, [conversacion, irAFinalDeChat]);
     useEffect(() => { ajustarAlturaInputTexto(); }, [textoPrompt]);
@@ -174,27 +184,46 @@ const Chat = ({
         const nuevosArchivosParaSubir = archivosPdfNuevos;
 
         if (sintesisVozDisponible && window.speechSynthesis.speaking) {
-            window.speechSynthesis.cancel(); setIdMensajeReproduciendo(null); refDeclaracionVoz.current = null;
+            window.speechSynthesis.cancel();
+            setIdMensajeReproduciendo(null);
+            refDeclaracionVoz.current = null;
         }
-        
+
         const esSolicitudImagen = promptUsuarioActual.toLowerCase().startsWith("/imagen ") || promptUsuarioActual.toLowerCase().startsWith("/image ");
         const promptLimpioParaBackend = esSolicitudImagen ? promptUsuarioActual.substring(promptUsuarioActual.indexOf(" ") + 1).trim() : promptUsuarioActual;
+        
+        let conversacionTemporalParaCatch; // Para tener la conversación actualizada en el catch
 
         if (esSolicitudImagen) {
             if (!promptLimpioParaBackend) {
                 setMensajeErrorChat(idioma === 'es' ? "Por favor, proporciona una descripción para la imagen después de /imagen." : "Please provide a description for the image after /image.");
+                if (refEntradaTexto.current) {
+                    requestAnimationFrame(() => {
+                        if (refEntradaTexto.current) {
+                             console.log("[FOCO DEBUG] Intentando foco en 'esSolicitudImagen' SIN promptLimpioParaBackend");
+                             refEntradaTexto.current.focus();
+                             console.log("[FOCO DEBUG] Active element:", document.activeElement);
+                        }
+                    });
+                }
                 return;
             }
-            
-            setEstaCargandoRespuesta(true); setMensajeErrorChat("");
+
+            setEstaCargandoRespuesta(true); 
+            setMensajeErrorChat("");
             let idConvActualParaOperacion = idConversacionActiva;
             const mensajeComandoUsuario = { id: Date.now() + '_cmd', role: "user", text: promptUsuarioActual, date: new Date(), esError: false, isImage: false };
-            establecerConversacion(prev => [...prev, mensajeComandoUsuario]);
-            setTextoPrompt(""); 
-            requestAnimationFrame(() => { if (refEntradaTexto.current) refEntradaTexto.current.style.height = 'auto'; irAFinalDeChat(); });
+            
+            // Actualizar estado de conversación inmediatamente para que el usuario vea su mensaje
+            // Y guardar esta nueva conversación para el bloque catch si es necesario
+            establecerConversacion(prev => {
+                conversacionTemporalParaCatch = [...prev, mensajeComandoUsuario];
+                return conversacionTemporalParaCatch;
+            });
 
             try {
                 if (!idConvActualParaOperacion) {
+                    // ... (lógica de creación de nueva conversación para imagen) ...
                     console.log("[Chat] Creando nueva conversación para /imagen...");
                     const datosFormularioNuevaConv = new FormData();
                     datosFormularioNuevaConv.append("prompt", `Nueva conversación para imagen: ${promptLimpioParaBackend.substring(0, 30)}...`);
@@ -215,10 +244,10 @@ const Chat = ({
                         throw new Error(datosRespuestaNuevaConv.error || 'Error creando conversación para la imagen.');
                     }
                     idConvActualParaOperacion = datosRespuestaNuevaConv.conversationId;
-                    establecerIdConversacionActiva(idConvActualParaOperacion);
+                    establecerIdConversacionActiva(idConvActualParaOperacion); // Esto actualiza idConversacionActiva
                     if (datosRespuestaNuevaConv.respuesta && datosRespuestaNuevaConv.respuesta.trim()) {
                         const mensajeResumenConv = { id: Date.now() + '_sum', role: "model", text: datosRespuestaNuevaConv.respuesta, date: new Date(), esError: false, isImage: false };
-                        establecerConversacion(prev => [...prev, mensajeResumenConv]);
+                        establecerConversacion(prev => [...prev, mensajeResumenConv]); // Añade el resumen
                     }
                     if (typeof refrescarHistorial === 'function') setTimeout(refrescarHistorial, 250);
                 }
@@ -241,30 +270,56 @@ const Chat = ({
                     date: new Date(),
                     esError: !!datosResultadoImagen.errorDB,
                 };
-                establecerConversacion(prev => [...prev, mensajeConImagenGenerada]);
+                establecerConversacion(prev => [...prev, mensajeConImagenGenerada]); // Añade la imagen
 
             } catch (err) {
                 const detalleError = err.message || (idioma === 'es' ? 'Error al generar imagen.' : 'Error generating image.');
                 const mensajeErrorImagen = { id: Date.now() + '_err_img', role: "model", text: detalleError, esError: true, date: new Date(), isImage: false };
-                establecerConversacion(prev => [...prev, mensajeErrorImagen]);
+                // Usar la conversacionTemporalParaCatch si está definida, si no, usar el 'prev' actual de establecerConversacion
+                establecerConversacion(prev => [...(conversacionTemporalParaCatch || prev), mensajeErrorImagen]);
                 setMensajeErrorChat(detalleError);
             } finally {
-                setEstaCargandoRespuesta(false); irAFinalDeChat();
+                setEstaCargandoRespuesta(false);
+                setTextoPrompt(""); 
+                if (refEntradaTexto.current) {
+                    refEntradaTexto.current.style.height = 'auto';
+                }
+                irAFinalDeChat();
+                if (refEntradaTexto.current) {
+                    requestAnimationFrame(() => {
+                        if (refEntradaTexto.current) {
+                            console.log("[FOCO DEBUG] Intentando foco en finally 'esSolicitudImagen'");
+                            refEntradaTexto.current.focus();
+                            console.log("[FOCO DEBUG] Active element:", document.activeElement);
+                        }
+                    });
+                }
             }
-            return; 
+            return;
         }
 
         if ( !promptUsuarioActual && nuevosArchivosParaSubir.length === 0 && archivosExistentesSeleccionados.length === 0 ) {
             setMensajeErrorChat(idioma === 'es' ? "Por favor, escribe un mensaje o selecciona/sube al menos un archivo PDF." : "Please write a message or select/upload at least one PDF file.");
+            if (refEntradaTexto.current) {
+                requestAnimationFrame(() => {
+                    if (refEntradaTexto.current) {
+                        console.log("[FOCO DEBUG] Intentando foco en 'sin prompt ni archivos'");
+                        refEntradaTexto.current.focus();
+                        console.log("[FOCO DEBUG] Active element:", document.activeElement);
+                    }
+                });
+            }
             return;
         }
-        
-        setEstaCargandoRespuesta(true); setMensajeErrorChat("");
+
+        setEstaCargandoRespuesta(true); 
+        setMensajeErrorChat("");
         const mensajeDeUsuario = { id: Date.now() + '_usr', role: "user", text: promptUsuarioActual, date: new Date(), esError: false, isImage: false };
-        const conversacionConNuevoMensajeUsuario = [...conversacion, mensajeDeUsuario];
-        establecerConversacion(conversacionConNuevoMensajeUsuario);
-        setTextoPrompt(""); 
-        requestAnimationFrame(() => { if (refEntradaTexto.current) refEntradaTexto.current.style.height = 'auto'; irAFinalDeChat(); });
+        
+        establecerConversacion(prev => {
+            conversacionTemporalParaCatch = [...prev, mensajeDeUsuario];
+            return conversacionTemporalParaCatch;
+        });
 
         try {
             const datosFormulario = new FormData();
@@ -297,9 +352,22 @@ const Chat = ({
                 throw new Error(datosRespuestaTexto.error || `Error ${respuestaServicioTexto.status} generando texto`);
             }
             
-            const esRespuestaConErrorIA = !datosRespuestaTexto.respuesta || datosRespuestaTexto.respuesta.toLowerCase().includes("lo siento") || datosRespuestaTexto.respuesta.toLowerCase().includes("i'm sorry") || datosRespuestaTexto.respuesta.toLowerCase().includes("error");
-            const mensajeTextoGenerado = { id: datosRespuestaTexto.messageId || Date.now() + '_model', role: "model", text: datosRespuestaTexto.respuesta || (datosRespuestaTexto.error || ""), date: new Date(), esError: esRespuestaConErrorIA || !!datosRespuestaTexto.error, isImage: false };
-            establecerConversacion([...conversacionConNuevoMensajeUsuario, mensajeTextoGenerado]);
+            const esRespuestaConErrorIA = (!datosRespuestaTexto.respuesta && !datosRespuestaTexto.error) ||
+                                         (datosRespuestaTexto.respuesta && (datosRespuestaTexto.respuesta.toLowerCase().includes("lo siento") || datosRespuestaTexto.respuesta.toLowerCase().includes("i'm sorry"))) ||
+                                         (datosRespuestaTexto.error);
+                                         
+            const textoAMostrar = datosRespuestaTexto.respuesta || datosRespuestaTexto.error || (idioma === 'es' ? "No se pudo obtener respuesta." : "Could not get a response.");
+
+            const mensajeTextoGenerado = { 
+                id: datosRespuestaTexto.messageId || Date.now() + '_model', 
+                role: "model", 
+                text: textoAMostrar, 
+                date: new Date(), 
+                esError: esRespuestaConErrorIA, 
+                isImage: false 
+            };
+            establecerConversacion(prev => [...(conversacionTemporalParaCatch || prev), mensajeTextoGenerado]);
+
 
             if (datosRespuestaTexto.isNewConversation && datosRespuestaTexto.conversationId) {
                 establecerIdConversacionActiva(datosRespuestaTexto.conversationId);
@@ -308,17 +376,33 @@ const Chat = ({
             if (nuevosArchivosParaSubir.length > 0 && typeof limpiarArchivosPdfNuevosYRefrescar === 'function') {
                 setTimeout(limpiarArchivosPdfNuevosYRefrescar, 150);
             }
+
         } catch (err) {
             const detalleError = err.message || (idioma === 'es' ? 'Error al generar respuesta.' : 'Error generating response.');
             const mensajeErrorTexto = { id: Date.now() + '_err_txt', role: "model", text: detalleError, esError: true, date: new Date(), isImage: false };
-            establecerConversacion([...conversacionConNuevoMensajeUsuario, mensajeErrorTexto]);
+            establecerConversacion(prev => [...(conversacionTemporalParaCatch || prev), mensajeErrorTexto]);
             setMensajeErrorChat(detalleError);
         } finally {
-            setEstaCargandoRespuesta(false); irAFinalDeChat();
+            setEstaCargandoRespuesta(false);
+            setTextoPrompt(""); 
+            if (refEntradaTexto.current) {
+                refEntradaTexto.current.style.height = 'auto';
+            }
+            irAFinalDeChat();
+            if (refEntradaTexto.current) {
+                requestAnimationFrame(() => {
+                    if (refEntradaTexto.current) {
+                        console.log("[FOCO DEBUG] Intentando foco en finally de texto normal");
+                        refEntradaTexto.current.focus();
+                        console.log("[FOCO DEBUG] Active element:", document.activeElement);
+                    }
+                });
+            }
         }
     };
 
     const gestionarCambioModeloIA = (evento) => { setModeloIaSeleccionado(evento.target.value); };
+    
     const gestionarTeclaEnter = (e) => {
          if (e.key === 'Enter' && !e.shiftKey && !estaCargandoRespuesta) {
              e.preventDefault();
@@ -327,6 +411,18 @@ const Chat = ({
               const nuevosArchivosParaSubir = archivosPdfNuevos;
               if (promptUsuarioActualRecortado || (promptUsuarioActualRecortado.toLowerCase().startsWith("/imagen ") || promptUsuarioActualRecortado.toLowerCase().startsWith("/image ")) || nuevosArchivosParaSubir.length > 0 || archivosExistentesSeleccionados.length > 0) {
                  enviarPromptYObtenerRespuesta(null);
+             } else {
+                // Si no se envía nada, pero el usuario presiona Enter,
+                // puede ser útil re-enfocar si el textarea perdió el foco por alguna razón
+                if (refEntradaTexto.current && document.activeElement !== refEntradaTexto.current) {
+                    requestAnimationFrame(() => {
+                         if (refEntradaTexto.current) {
+                            console.log("[FOCO DEBUG] Intentando foco en Enter sin envío");
+                            refEntradaTexto.current.focus();
+                            console.log("[FOCO DEBUG] Active element:", document.activeElement);
+                        }
+                    });
+                }
              }
          }
     };
@@ -334,6 +430,7 @@ const Chat = ({
 
     return (
         <div className="flex flex-col flex-1 max-h-screen bg-surface text-primary">
+            {/* Header del Chat */}
             <div className="relative flex items-center justify-between flex-shrink-0 p-3 border-b border-divider">
                 <button onClick={toggleMobileMenu} className="p-1.5 rounded-md text-secondary hover:text-primary hover:bg-hover-item md:hidden" title={idioma === 'es' ? 'Abrir menú' : 'Open menu'} aria-label={idioma === 'es' ? 'Abrir menú' : 'Open menu'} > <IconoMenu /> </button>
                  <div className="flex flex-col items-center text-center flex-grow min-w-0 px-2">
@@ -355,6 +452,7 @@ const Chat = ({
                  </div>
             </div>
 
+            {/* Contenedor de Mensajes */}
              <div ref={refScrollMensajes} className="flex-1 p-4 overflow-y-auto sm:p-6 bg-base custom-scrollbar">
                  <div className="space-y-4">
                      {!Array.isArray(conversacion) || conversacion.length === 0 && !estaCargandoRespuesta ? (
@@ -423,6 +521,7 @@ const Chat = ({
                  </div>
              </div>
 
+            {/* Formulario de Envío */}
             <form onSubmit={enviarPromptYObtenerRespuesta} className="flex items-end flex-shrink-0 gap-2 p-3 border-t border-divider bg-surface">
                  <div className="flex-shrink-0 self-end">
                       <input type="file" accept=".pdf" multiple onChange={manejarCambioArchivoInput} disabled={estaCargandoRespuesta} className="hidden" id="inputArchivoPdf" />
