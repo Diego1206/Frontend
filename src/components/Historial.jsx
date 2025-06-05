@@ -50,6 +50,7 @@ const Historial = ({
 
     const [mostrarConfiguracion, setMostrarConfiguracion] = useState(false);
     const [archivosAbiertos, setArchivosAbiertos] = useState(true);
+    const [historialAbierto, setHistorialAbierto] = useState(true); // NUEVO ESTADO
     const [idConvEditandoTitulo, setIdConvEditandoTitulo] = useState(null);
     const [tituloEnEdicion, setTituloEnEdicion] = useState('');
     const refInputTitulo = useRef(null);
@@ -60,6 +61,7 @@ const Historial = ({
     const [errorAlCargarMensajes, setErrorAlCargarMensajes] = useState('');
 
     const esCliente = typeof window !== 'undefined';
+    const esMovil = esCliente && window.innerWidth < 768;
 
     useEffect(() => {
       if (idConvEditandoTitulo !== null && refInputTitulo.current) {
@@ -238,17 +240,6 @@ const Historial = ({
         estaPanelLateralAbierto ? 'w-72 md:w-64 lg:w-72' : 'w-72 md:w-16'
     );
 
-    const esMovil = esCliente && window.innerWidth < 768;
-    const alturaElementoHistorialAprox = 40; 
-    const maxConversacionesVisibles = 12; 
-    const maxHeightHistorial = alturaElementoHistorialAprox * maxConversacionesVisibles;
-    
-    // NUEVO: Calcular maxHeight para archivos
-    const alturaElementoArchivoAprox = 36; // Ajustar esto según el padding/altura de tus items de archivo (p-1.5 es 6px + 6px = 12px, más altura de texto/checkbox)
-    const maxArchivosVisibles = 3; // Cuántos archivos mostrar antes del scroll. CAMBIA ESTO A 2 SI PREFIERES
-    const maxHeightArchivosCalculado = alturaElementoArchivoAprox * maxArchivosVisibles;
-
-
     const paddingClaseAbierto = 'p-4';
     const paddingClaseCerrado = 'md:p-2 md:pt-4 p-4';
 
@@ -263,6 +254,7 @@ const Historial = ({
                     estaPanelLateralAbierto ? paddingClaseAbierto : paddingClaseCerrado
                 )}>
 
+                    {/* Cabecera del Panel: Botón de búsqueda y toggle del panel */}
                     <div className={classNames( 'hidden md:flex items-center relative flex-shrink-0', 
                                                 estaPanelLateralAbierto ? 'mb-4 justify-between space-x-2' : 'mb-2 w-full justify-center')}>
                         {estaPanelLateralAbierto && (
@@ -279,6 +271,7 @@ const Historial = ({
                         </button>
                     </div>
                 
+                    {/* Botón Nueva Conversación */}
                     <div className={classNames('flex-shrink-0 relative', { 'mb-4 w-full': estaPanelLateralAbierto, 'w-auto mb-4 md:w-full': !estaPanelLateralAbierto })}>
                         <button
                             onClick={gestionarNuevaConversacionVaciaWrapper}
@@ -295,45 +288,58 @@ const Historial = ({
 
                     {(estaPanelLateralAbierto || esMovil) && <hr className={classNames("mb-4 flex-shrink-0 border-divider", {'hidden md:block': !estaPanelLateralAbierto && !esMovil})} />}
                     
-                    <div className="flex-grow flex flex-col min-h-0"> 
-                        <div className={classNames('flex-shrink-0', { 'md:hidden': !estaPanelLateralAbierto && !esMovil }, estaPanelLateralAbierto ? 'mb-6' : 'mb-2')}>
-                            {estaPanelLateralAbierto && <h2 className="text-xs font-semibold uppercase tracking-wider mb-2 px-1 flex-shrink-0 text-muted">{idioma === 'es' ? 'Historial' : 'History'}</h2>}
-                            {errorAlCargarMensajes && estaPanelLateralAbierto && ( <p className="px-2 py-1 mb-2 text-xs rounded border bg-error-notification text-error border-error-notification"> {errorAlCargarMensajes} </p> )}
-                            
-                            {estaPanelLateralAbierto && Array.isArray(conversacionesFiltradas) && conversacionesFiltradas.length > 0 ? (
+                    {/* Contenedor principal para Historial y Archivos que permitirá el scroll */}
+                    <div className="flex-grow flex flex-col min-h-0 overflow-y-auto custom-scrollbar"> 
+                        {/* Sección Historial */}
+                        <div className={classNames('flex-shrink-0', { 'md:hidden': !estaPanelLateralAbierto && !esMovil }, estaPanelLateralAbierto ? 'mb-4' : 'mb-2')}>
+                            {estaPanelLateralAbierto && (
                                 <div 
-                                    className="overflow-y-auto custom-scrollbar pr-1"
-                                    style={{ maxHeight: `${maxHeightHistorial}px` }}
+                                    className="flex items-center justify-between px-1 mb-2 transition-colors rounded cursor-pointer hover:bg-hover-item flex-shrink-0" 
+                                    onClick={() => setHistorialAbierto(!historialAbierto)} 
+                                    title={historialAbierto ? (idioma === 'es' ? "Ocultar historial" : "Hide history") : (idioma === 'es' ? "Mostrar historial" : "Show history")}
                                 >
-                                    <ul className="space-y-1">
-                                        {conversacionesFiltradas.map((item) => {
-                                            if (!item || typeof item.id === 'undefined') return null;
-                                            const estaSeleccionado = item.id === idConversacionActiva;
-                                            const estaEditando = idConvEditandoTitulo === item.id;
-                                            return (
-                                                <li key={item.id}>
-                                                    <div onClick={() => !estaEditando && gestionarClicConversacionWrapper(item.id)}
-                                                        className={classNames( 'w-full group flex justify-between items-center text-left p-2 rounded-md transition-colors text-sm relative', { 'cursor-pointer hover:bg-hover-item': !estaEditando, 'bg-active-item font-medium': estaSeleccionado && !estaEditando, 'bg-input': estaEditando, 'opacity-50 pointer-events-none': cargandoMensajes && idConversacionActiva === item.id, } )} title={item.titulo || ''} >
-                                                        {cargandoMensajes && idConversacionActiva === item.id && ( <div className="absolute inset-0 flex items-center justify-center rounded-md z-10 bg-sidebar bg-opacity-75"> <div className="w-4 h-4 border-b-2 rounded-full animate-spin border-secondary"></div> </div> )}
-                                                        {estaEditando ? ( <input ref={refInputTitulo} type="text" value={tituloEnEdicion} onChange={gestionarCambioTituloInput} onKeyDown={gestionarTeclaEnInputTitulo} onBlur={guardarTituloEditado} className="flex-1 px-1 py-0 mr-2 text-sm outline-none z-10 bg-transparent text-primary border-b border-accent" onClick={(e) => e.stopPropagation()} /> ) : ( <span className={classNames( 'flex-1 pr-2 truncate', { 'text-primary': estaSeleccionado, 'text-secondary group-hover:text-primary': !estaSeleccionado } )}> {item.titulo} </span> )}
-                                                        {!estaEditando && (
-                                                            <div className={classNames( 'flex items-center flex-shrink-0 space-x-1 transition-opacity z-20', 'opacity-0 focus-within:opacity-100', { 'opacity-100': estaSeleccionado, 'md:group-hover:opacity-100': !estaSeleccionado } )}>
-                                                                <button onClick={(e) => { e.stopPropagation(); iniciarEdicionTitulo(item.id, item.titulo); }} className="p-1 rounded-md text-muted hover:text-primary hover:bg-hover-item cursor-pointer" title={idioma === 'es' ? "Renombrar" : "Rename"}> <IconoEditar className="transition-colors duration-150 ease-in-out" /> </button>
-                                                                <button onClick={(e) => { e.stopPropagation(); gestionarBorrarConversacion(item.id); }} className="p-1 rounded-md text-muted hover:bg-hover-item cursor-pointer" title={idioma === 'es' ? "Borrar" : "Delete"}> <IconoPapelera className="group-hover:stroke-error transition-colors duration-150 ease-in-out" /> </button>
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </li>
-                                            );
-                                        })}
-                                    </ul>
+                                    <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">{idioma === 'es' ? 'Historial' : 'History'}</h2>
+                                    <span className="p-1 text-muted">{historialAbierto ? <IconoChevronArriba /> : <IconoChevronAbajo />}</span>
                                 </div>
-                            ) : ( estaPanelLateralAbierto && <p className="px-1 text-sm flex-shrink-0 text-muted"> {textoBusqueda ? (idioma === 'es' ? 'No hay coincidencias.' : 'No matches found.') : (idioma === 'es' ? 'No hay conversaciones.' : 'No conversations yet.')} </p> )}
+                            )}
+                            {errorAlCargarMensajes && estaPanelLateralAbierto && historialAbierto && ( <p className="px-2 py-1 mb-2 text-xs rounded border bg-error-notification text-error border-error-notification"> {errorAlCargarMensajes} </p> )}
+                            
+                            {estaPanelLateralAbierto && historialAbierto && (
+                                <>
+                                    {Array.isArray(conversacionesFiltradas) && conversacionesFiltradas.length > 0 ? (
+                                        <div className="pr-1">
+                                            <ul className="space-y-1">
+                                                {conversacionesFiltradas.map((item) => {
+                                                    if (!item || typeof item.id === 'undefined') return null;
+                                                    const estaSeleccionado = item.id === idConversacionActiva;
+                                                    const estaEditando = idConvEditandoTitulo === item.id;
+                                                    return (
+                                                        <li key={item.id}>
+                                                            <div onClick={() => !estaEditando && gestionarClicConversacionWrapper(item.id)}
+                                                                className={classNames( 'w-full group flex justify-between items-center text-left p-2 rounded-md transition-colors text-sm relative', { 'cursor-pointer hover:bg-hover-item': !estaEditando, 'bg-active-item font-medium': estaSeleccionado && !estaEditando, 'bg-input': estaEditando, 'opacity-50 pointer-events-none': cargandoMensajes && idConversacionActiva === item.id, } )} title={item.titulo || ''} >
+                                                                {cargandoMensajes && idConversacionActiva === item.id && ( <div className="absolute inset-0 flex items-center justify-center rounded-md z-10 bg-sidebar bg-opacity-75"> <div className="w-4 h-4 border-b-2 rounded-full animate-spin border-secondary"></div> </div> )}
+                                                                {estaEditando ? ( <input ref={refInputTitulo} type="text" value={tituloEnEdicion} onChange={gestionarCambioTituloInput} onKeyDown={gestionarTeclaEnInputTitulo} onBlur={guardarTituloEditado} className="flex-1 px-1 py-0 mr-2 text-sm outline-none z-10 bg-transparent text-primary border-b border-accent" onClick={(e) => e.stopPropagation()} /> ) : ( <span className={classNames( 'flex-1 pr-2 truncate', { 'text-primary': estaSeleccionado, 'text-secondary group-hover:text-primary': !estaSeleccionado } )}> {item.titulo} </span> )}
+                                                                {!estaEditando && (
+                                                                    <div className={classNames( 'flex items-center flex-shrink-0 space-x-1 transition-opacity z-20', 'opacity-0 focus-within:opacity-100', { 'opacity-100': estaSeleccionado, 'md:group-hover:opacity-100': !estaSeleccionado } )}>
+                                                                        <button onClick={(e) => { e.stopPropagation(); iniciarEdicionTitulo(item.id, item.titulo); }} className="p-1 rounded-md text-muted hover:text-primary hover:bg-hover-item cursor-pointer" title={idioma === 'es' ? "Renombrar" : "Rename"}> <IconoEditar className="transition-colors duration-150 ease-in-out" /> </button>
+                                                                        <button onClick={(e) => { e.stopPropagation(); gestionarBorrarConversacion(item.id); }} className="p-1 rounded-md text-muted hover:bg-hover-item cursor-pointer" title={idioma === 'es' ? "Borrar" : "Delete"}> <IconoPapelera className="group-hover:stroke-error transition-colors duration-150 ease-in-out" /> </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </li>
+                                                    );
+                                                })}
+                                            </ul>
+                                        </div>
+                                    ) : ( <p className="px-1 text-sm flex-shrink-0 text-muted"> {textoBusqueda ? (idioma === 'es' ? 'No hay coincidencias.' : 'No matches found.') : (idioma === 'es' ? 'No hay conversaciones.' : 'No conversations yet.')} </p> )}
+                                </>
+                            )}
                         </div>
 
-                        <div className={classNames('flex-shrink-0', { 'md:hidden': !estaPanelLateralAbierto && !esMovil }, estaPanelLateralAbierto ? 'border-t border-divider pt-4' : 'border-t border-divider pt-2')}>
+                        {/* Sección Archivos */}
+                        <div className={classNames('flex-shrink-0', {'mt-auto': estaPanelLateralAbierto }, { 'md:hidden': !estaPanelLateralAbierto && !esMovil }, estaPanelLateralAbierto ? 'border-t border-divider pt-4' : 'border-t border-divider pt-2')}>
                             { estaPanelLateralAbierto && (
-                                <div className="flex items-center justify-between px-1 mb-2 transition-colors rounded cursor-pointer hover:bg-hover-item flex-shrink-0" onClick={() => setArchivosAbiertos(!archivosAbiertos)} title={archivosAbiertos ? (idioma === 'es' ? "Ocultar" : "Hide") : (idioma === 'es' ? "Mostrar" : "Show")}>
+                                <div className="flex items-center justify-between px-1 mb-2 transition-colors rounded cursor-pointer hover:bg-hover-item flex-shrink-0" onClick={() => setArchivosAbiertos(!archivosAbiertos)} title={archivosAbiertos ? (idioma === 'es' ? "Ocultar archivos" : "Hide files") : (idioma === 'es' ? "Mostrar archivos" : "Show files")}>
                                     <h3 className="text-xs font-semibold tracking-wider uppercase text-muted">{idioma === 'es' ? 'Archivos Disponibles' : 'Available Files'}</h3>
                                     <div className="flex items-center space-x-1">
                                         <button onClick={(e) => { e.stopPropagation(); if(typeof refrescarListaArchivos === 'function') refrescarListaArchivos(false); }} className="p-1 transition-colors rounded-md text-muted hover:text-primary hover:bg-hover-item cursor-pointer" title={idioma === 'es' ? "Refrescar" : "Refresh"}> <IconoRefrescar /> </button>
@@ -342,10 +348,7 @@ const Historial = ({
                                 </div>
                             )}
                             {estaPanelLateralAbierto && archivosAbiertos && (
-                                <div 
-                                    className="overflow-y-auto custom-scrollbar pr-1"
-                                    style={{maxHeight: `${maxHeightArchivosCalculado}px`}} // Usar maxHeight calculado
-                                > 
+                                <div className="pr-1"> 
                                     {Array.isArray(listaArchivosUsuario) && listaArchivosUsuario.filter(f => f && !f.esNuevo).length > 0 ? (
                                         <div className="pb-2 space-y-1"> 
                                             {listaArchivosUsuario.filter(f => f && !f.esNuevo).map((archivo) => {
@@ -364,17 +367,19 @@ const Historial = ({
                                 </div>
                             )}
                         </div>
-                        <div className="flex-grow"></div>
-                    </div>
+                    </div> {/* Fin del div scrolleable principal */}
 
+                    {/* Pie de página del Panel: Usuario y Controles */}
                     <div className={classNames( 'flex-shrink-0 border-t border-divider', 
                                                 estaPanelLateralAbierto ? 'pt-4' : 'mt-auto pt-2 pb-2 flex flex-col items-center space-y-3' )}>
-                        {(estaPanelLateralAbierto || (esMovil && !estaPanelLateralAbierto && isMobileMenuOpen)) && currentUser && (
-                             <div className={classNames("text-xs truncate text-muted", estaPanelLateralAbierto ? 'px-1 mb-2' : 'mb-2 text-center w-full')}>
+                        
+                        {estaPanelLateralAbierto && currentUser && (
+                             <div className="text-xs truncate text-muted px-1 mb-2">
                                 {idioma === 'es' ? 'Usuario: ' : 'Logged in as: '}
                                 <span className="font-medium text-secondary">{currentUser.username}</span>
                             </div>
                         )}
+
                         <div className={classNames( 'flex items-center',
                                                     estaPanelLateralAbierto ? 'justify-between space-x-2 px-1 pb-1' : 'flex-col space-y-3')}>
                             <button onClick={cambiarTema} className={classNames('p-2 transition-colors rounded-md text-secondary hover:text-primary cursor-pointer', {'hover:bg-hover-item': estaPanelLateralAbierto})} title={theme === 'dark' ? (idioma === 'es' ? 'Modo Claro' : 'Light Mode') : (idioma === 'es' ? 'Modo Oscuro' : 'Dark Mode')} > {theme === 'dark' ? <IconoSol /> : <IconoLuna />} </button>
